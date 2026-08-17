@@ -1,0 +1,11 @@
+.git
+.idea
+.venv
+venv
+__pycache__
+*.py[cod]
+tempCodeRunnerFile.py
+q2.py
+*.md
+.dockerignore
+Dockerfile
