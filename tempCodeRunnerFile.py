@@ -1,2 +1,2 @@
-    page.assets_dir = "assets" 
-    page.favicon = "logo.png"
+page.assets_dir = "assets" 
+page.favicon = "logo.png"

@@ -13,7 +13,7 @@ class WeatherService:
                 "latitude": latitude,
                 "longitude": longitude,
                 "current_weather": "true",
-                "hourly": "temperature_2m,relative_humidity_2m,weathercode",
+                "hourly": "temperature_2m,relative_humidity_2m,weathercode,windspeed_10m",
                 "daily": (
                     "weathercode,"
                     "temperature_2m_max,"
