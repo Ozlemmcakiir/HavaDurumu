@@ -2,11 +2,11 @@ import requests
 
 
 class LocationService:
+    """Open-Meteo geocoding: şehir/ülke araması."""
 
     GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
     def search_city(self, city_name):
-
         response = requests.get(
             self.GEOCODE_URL,
             params={
@@ -17,7 +17,5 @@ class LocationService:
             },
             timeout=10,
         )
-
         response.raise_for_status()
-
-        return response.json().get("results", [])
+        return response.json().get("results") or []
