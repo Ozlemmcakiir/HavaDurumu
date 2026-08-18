@@ -3,8 +3,8 @@
 Chart adı **havadurumu**, release adı **gokyuzu**.
 
 ```
-chart  = tarif   (havadurumu)
-release = kurulum (gokyuzu)
+chart   = tarif    (havadurumu)
+release = kurulum  (gokyuzu)
 ```
 
 ## Dosyalar
@@ -18,6 +18,7 @@ release = kurulum (gokyuzu)
 | `templates/configmap.yaml` | Flet ortam değişkenleri |
 | `templates/serviceaccount.yaml` | Pod kimliği |
 | `templates/ingress.yaml` | Kapalı; gerçek yayın için |
+| `templates/NOTES.txt` | `helm install` sonrası komutlar |
 | `templates/_helpers.tpl` | Ortak isim ve etiketler |
 
 ## Kurulum
@@ -31,4 +32,3 @@ kubectl port-forward svc/havadurumu 8080:8000
 ```
 
 Veya `scripts\deploy.ps1`.
- 

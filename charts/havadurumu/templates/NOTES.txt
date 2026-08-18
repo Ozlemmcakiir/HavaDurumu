@@ -1,0 +1,23 @@
+Gökyüzü ({{ .Chart.Name }}) yüklendi.
+
+  Release   : {{ .Release.Name }}
+  Chart     : {{ .Chart.Name }}-{{ .Chart.Version }}
+  Namespace : {{ .Release.Namespace }}
+  Pod sayısı: {{ .Values.replicaCount }}
+  İmaj      : {{ .Values.image.repository }}:{{ .Values.image.tag }}
+  Service   : {{ .Values.service.type }} {{ include "havadurumu.name" . }}:{{ .Values.service.port }}
+
+Uygulamayı bu laptop'tan açmak için (pencere açık kalsın):
+
+  kubectl port-forward svc/{{ include "havadurumu.name" . }} 8080:{{ .Values.service.port }}
+
+Sonra tarayıcıda: http://127.0.0.1:8080
+
+Ölçeklemek için values.yaml içinde replicaCount'u değiştirip tekrar:
+
+  helm upgrade --install {{ .Release.Name }} charts/havadurumu
+
+Durumu görmek:
+
+  helm list -A
+  kubectl get pods,svc -l app={{ include "havadurumu.name" . }}
