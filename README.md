@@ -5,7 +5,7 @@ Open-Meteo verisiyle çalışan Flet web uygulaması. Yerel kümede **Minikube +
 ```
 Python kodu → Docker imajı (havadurumu:0.1.0)
             → Helm chart (havadurumu)
-            → release (gokyuzu)
+            → release (bilgeadam)
             → 2 pod + Service
             → tarayıcı (port-forward)
 ```
@@ -51,7 +51,7 @@ Script şunları yapar:
 1. Minikube yoksa `minikube start --driver=docker`
 2. `minikube image build -t havadurumu:0.1.0 .` — imaj kümenin Docker'ına gider (`imagePullPolicy: Never`)
 3. `helm lint charts/havadurumu`
-4. `helm upgrade --install gokyuzu charts/havadurumu`
+4. `helm upgrade --install bilgeadam charts/havadurumu`
 
 Uygulamayı açmak (pencere açık kalsın):
 
@@ -66,7 +66,7 @@ Adım adım elle:
 ```powershell
 minikube start --driver=docker
 minikube image build -t havadurumu:0.1.0 .
-helm upgrade --install gokyuzu charts/havadurumu
+helm upgrade --install bilgeadam charts/havadurumu
 kubectl get pods,svc -l app=havadurumu
 kubectl port-forward svc/havadurumu 8080:8000
 ```
@@ -76,12 +76,12 @@ kubectl port-forward svc/havadurumu 8080:8000
 | Komut | Ne bakar? |
 | --- | --- |
 | `minikube status` | Küme ayakta mı? |
-| `helm list -A` | Release'ler — `gokyuzu` görünmeli |
+| `helm list -A` | Release'ler — `bilgeadam` görünmeli |
 | `kubectl get pods -l app=havadurumu` | 2 pod yeşil mi? |
-| `helm upgrade --install gokyuzu charts/havadurumu` | Değer değişince yeniden uygula |
-| `helm uninstall gokyuzu` | Kaldır (`scripts\uninstall.ps1`) |
+| `helm upgrade --install bilgeadam charts/havadurumu` | Değer değişince yeniden uygula |
+| `helm uninstall bilgeadam` | Kaldır (`scripts\uninstall.ps1`) |
 
-Ölçeklemek: `charts/havadurumu/values.yaml` içinde `replicaCount: 3` yapıp `helm upgrade --install gokyuzu charts/havadurumu`.
+Ölçeklemek: `charts/havadurumu/values.yaml` içinde `replicaCount: 3` yapıp `helm upgrade --install bilgeadam charts/havadurumu`.
 
 ## Yerel Python (küme olmadan)
 

@@ -8,7 +8,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 $Image = "havadurumu:0.1.0"
-$Release = "gokyuzu"
+$Release = "bilgeadam"
 $Chart = "charts/havadurumu"
 
 Write-Host "==> Minikube durumu"

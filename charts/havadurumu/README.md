@@ -1,10 +1,10 @@
 # havadurumu Helm chart
 
-Chart adı **havadurumu**, release adı **gokyuzu**.
+Chart adı **havadurumu**, release adı **bilgeadam**.
 
 ```
 chart   = tarif    (havadurumu)
-release = kurulum  (gokyuzu)
+release = kurulum  (bilgeadam)
 ```
 
 ## Dosyalar
@@ -27,7 +27,7 @@ Proje kökünden:
 
 ```powershell
 minikube image build -t havadurumu:0.1.0 .
-helm upgrade --install gokyuzu charts/havadurumu
+helm upgrade --install bilgeadam charts/havadurumu
 kubectl port-forward svc/havadurumu 8080:8000
 ```
 

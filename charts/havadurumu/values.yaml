@@ -1,5 +1,5 @@
 # Gökyüzü — Minikube / Helm eğitim değerleri
-# Değiştirip `helm upgrade --install gokyuzu charts/havadurumu` yeter.
+# Değiştirip `helm upgrade --install bilgeadam charts/havadurumu` yeter.
 
 # Kaç pod çalışacak. Stajyer ölçekleme denemesi için 3 yapın.
 replicaCount: 2

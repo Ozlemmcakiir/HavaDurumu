@@ -1,7 +1,7 @@
 {{/*
 Chart adı. values.nameOverride varsa o kullanılır.
 Kaynak adları (Deployment / Service) buradan gelir — release adı değil.
-Release adı (gokyuzu) instance etiketinde durur.
+Release adı (bilgeadam) instance etiketinde durur.
 */}}
 {{- define "havadurumu.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
