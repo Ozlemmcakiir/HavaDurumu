@@ -1,0 +1,21 @@
+# VCS
+.git
+.gitignore
+.svn
+.hg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# Helm
+*.tgz
+charts/*.tgz
+
+# Python / OS
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

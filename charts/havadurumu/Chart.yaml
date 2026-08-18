@@ -1,0 +1,13 @@
+apiVersion: v2
+name: havadurumu
+description: Gökyüzü hava durumu uygulaması — Minikube / Helm eğitim chart'ı
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - weather
+  - flet
+  - egitim
+  - minikube
+maintainers:
+  - name: BilgeAdam
