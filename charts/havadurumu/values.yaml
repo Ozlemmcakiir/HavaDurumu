@@ -1,0 +1,59 @@
+# Gökyüzü — Minikube / Helm eğitim değerleri
+# Değiştirip `helm upgrade --install bilgeadam charts/havadurumu` yeter.
+
+# Kaç pod çalışacak. Stajyer ölçekleme denemesi için 3 yapın.
+replicaCount: 2
+
+# minikube image build -t havadurumu:0.1.0 . ile kümenin içine konur.
+# Registry yok; bu yüzden pullPolicy: Never.
+image:
+  repository: havadurumu
+  tag: "0.1.0"
+  pullPolicy: Never
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+# Minikube + Windows Docker'da NodePort tek başına tarayıcıya yetmez.
+# Uygulamayı açmak için: kubectl port-forward svc/havadurumu 8080:8000
+service:
+  type: NodePort
+  port: 8000
+  nodePort: 30080
+
+# Flet web sunucusu. ConfigMap'e yazılır, pod buradan okur.
+env:
+  FLET_FORCE_WEB_SERVER: "true"
+  FLET_SERVER_IP: "0.0.0.0"
+  FLET_SERVER_PORT: "8000"
+
+# Eğitim kümesi için kapalı. Gerçek yayın için nginx ingress + host gerekir.
+ingress:
+  enabled: false
+  className: nginx
+  host: havadurumu.local
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL

@@ -11,8 +11,9 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    host = os.getenv("FLET_HOST") or None
-    port = int(os.getenv("FLET_PORT", "0"))
+    host = os.getenv("FLET_SERVER_IP") or os.getenv("FLET_HOST") or None
+    port_raw = os.getenv("FLET_SERVER_PORT") or os.getenv("FLET_PORT") or "0"
+    port = int(port_raw)
 
     ft.run(
         main,
