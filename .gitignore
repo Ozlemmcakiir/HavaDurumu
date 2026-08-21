@@ -6,6 +6,7 @@ venv/
 .env
 .idea/
 .vscode/
+reports/
 *.tgz
 Thumbs.db
 .DS_Store

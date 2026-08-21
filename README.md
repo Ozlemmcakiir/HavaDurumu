@@ -23,6 +23,9 @@ HavaDurumu/
 ├── weather_utils.py        # ikon / tema
 ├── assets/                 # logo
 ├── Dockerfile              # imaj (port 8000)
+├── Jenkinsfile             # stajyer yazar: test → helm lint → docker build
+├── tests/                  # pytest (API mock'lu, ağ gerekmez)
+├── requirements-dev.txt    # pytest + requests (CI)
 ├── charts/havadurumu/      # Helm paketi  ← asıl kurulum
 │   ├── Chart.yaml
 │   ├── values.yaml         # replicaCount, imaj, port
@@ -33,7 +36,10 @@ HavaDurumu/
 │       ├── serviceaccount.yaml
 │       └── ingress.yaml    # kapalı
 ├── k8s/havadurumu.yaml     # Helm öncesi düz YAML (referans)
-└── scripts/deploy.ps1      # minikube image build + helm install
+└── scripts/
+    ├── deploy.ps1          # minikube image build + helm install
+    ├── uninstall.ps1
+    └── ci-test.sh          # Jenkins Test stage (python:3.12-slim içinde)
 ```
 
 ## Minikube + Helm (önerilen)
@@ -98,3 +104,43 @@ docker run --rm -p 8080:8000 havadurumu:0.1.0
 ```
 
 Konteyner 8000 dinler; laptop'ta 8080'e map edilir.
+
+## Jenkins CI
+
+Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
+
+1. **Test** — `python:3.12-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
+2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
+3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
+4. **Deploy Minikube** — kapalı gelir; job parametresinde `DEPLOY_MINIKUBE` işaretlenirse `scripts/deploy.ps1` (Windows) veya `minikube image build` + `helm upgrade` (Linux)
+
+Agent'ta Python veya Helm kurulu olması gerekmez. **Docker** gerekir (Test ve Helm aşamaları konteynerde koşar, imaj host Docker ile üretilir).
+
+Jenkins job:
+
+1. **New Item** → isim `havadurumu` → **Pipeline**
+2. Pipeline tanımı: **Pipeline script from SCM** → Git → bu repo
+3. Branch: `*/main` (dalın adı farklıysa düzelt)
+4. Script Path: `Jenkinsfile`
+5. Save → **Build Now**
+
+Jenkins'i PDF'deki gibi Docker konteynerinde çalıştırıyorsan, pipeline'ın `docker` komutunu görebilmesi için soketi bağla:
+
+```powershell
+docker run -d --name jenkins `
+  -p 8080:8080 -p 50000:50000 `
+  -v jenkins_home:/var/jenkins_home `
+  -v /var/run/docker.sock:/var/run/docker.sock `
+  jenkins/jenkins:lts-jdk17
+```
+
+Windows Docker Desktop'ta soket yolu farklı olabilir; o zaman Jenkins'i host'ta çalıştırıp Docker'ı PATH'te bırakmak daha basittir.
+
+CI'yı Jenkins olmadan yerelde denemek:
+
+```powershell
+py -3.12 -m pip install -r requirements-dev.txt
+py -3.12 -m pytest
+docker run --rm -v ${PWD}:/src -w /src alpine/helm:3.16.4 lint charts/havadurumu
+docker build -t havadurumu:0.1.0 .
+```

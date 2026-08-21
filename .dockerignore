@@ -1,12 +1,17 @@
 .git
 .idea
 .vscode
+.gitignore
+.gitattributes
 .venv
 venv
 __pycache__
 *.pyc
 *.pyo
 .pytest_cache
+.idea
+reports
+tests
 charts
 k8s
 scripts
@@ -15,6 +20,9 @@ scripts
 sunum.html
 q2.py
 make_stajyer_pdf.py
+Jenkinsfile
+pytest.ini
+requirements-dev.txt
 *.md
 .gitignore
 .dockerignore

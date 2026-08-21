@@ -1,0 +1,3 @@
+# CI / yerel test. Uygulama runtime bağımlılıkları requirements.txt'te kalır.
+pytest>=8.0
+requests>=2.31
