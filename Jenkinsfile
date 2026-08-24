@@ -22,7 +22,7 @@ pipeline {
         CHART      = 'charts/havadurumu'
         IMAGE_REPO = 'havadurumu'
         IMAGE_TAG  = "0.1.${env.BUILD_NUMBER}"
-        PYTHON_CI  = 'python:3.14.7-slim'
+        PYTHON_CI  = 'python:3.12-slim'
         HELM_CI    = 'alpine/helm:3.16.4'
     }
 
@@ -34,7 +34,8 @@ pipeline {
                     try {
                         checkout scm
                     } catch (err) {
-                        echo "SCM bağlı değil (script kutusuna yapıştırılmış olabilir). Workspace kullanılacak. ${err}"
+                        echo "SCM bağlı değil. Public Git reposu klonlanıyor..."
+                        git branch: 'main', url: 'https://github.com/Ozlemmcakiir/HavaDurumu.git'
                     }
                     echo "Gökyüzü CI  image=${IMAGE_REPO}:${IMAGE_TAG}  chart=${CHART}"
                 }
@@ -44,7 +45,6 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Agent'ta Python gerekmez; testler python:3.12-slim içinde koşar.
                     dockerSh("${PYTHON_CI}", "sh scripts/ci-test.sh")
                 }
             }
@@ -58,7 +58,6 @@ pipeline {
         stage('Helm Lint') {
             steps {
                 script {
-                    // alpine/helm imajının ENTRYPOINT'i helm'dir.
                     dockerSh("${HELM_CI}", "lint ${CHART}")
                     dockerSh("${HELM_CI}", "template ${RELEASE} ${CHART}")
                 }
