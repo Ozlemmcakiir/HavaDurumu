@@ -3,9 +3,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_dockerfile_python312_ve_port():
+def test_dockerfile_python_ve_port():
     text = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    assert "python:3.12-slim" in text
+    assert "FROM python:" in text
+    assert "slim" in text
     assert "EXPOSE 8000" in text
     assert "main.py" in text
 

@@ -113,14 +113,34 @@ pipeline {
 }
 
 def dockerSh(String image, String innerCommand) {
-    def vol = env.WORKSPACE
     if (!isUnix()) {
-        vol = vol.replace('\\', '/')
+        def vol = env.WORKSPACE.replace('\\', '/')
+        bat "docker run --rm -v \"${vol}:/src\" -w /src ${image} ${innerCommand}"
+        return
     }
-    def line = "docker run --rm -v \"${vol}:/src\" -w /src ${image} ${innerCommand}"
-    if (isUnix()) {
-        sh line
-    } else {
-        bat line
-    }
+
+    // Jenkins çoğu kurulumda kendisi de konteyner. `docker run -v $WORKSPACE`
+    // bind-mount'u host Docker daemon'a gider; host'ta bu yol yoksa /src boş kalır
+    // ve "scripts/ci-test.sh: No such file" üretir. Agent konteyneriyse
+    // volume'leri paylaş; değilse workspace'i docker cp ile içeri al.
+    sh """
+        set -e
+        mkdir -p reports
+        self=\$(hostname)
+        if [ -f /.dockerenv ] && docker inspect "\$self" >/dev/null 2>&1; then
+          docker run --rm --volumes-from "\$self" -w "${env.WORKSPACE}" ${image} ${innerCommand}
+        elif [ ! -f /.dockerenv ]; then
+          docker run --rm -v "${env.WORKSPACE}:/src" -w /src ${image} ${innerCommand}
+        else
+          cid=\$(docker create -w /src ${image} ${innerCommand})
+          docker cp "${env.WORKSPACE}/." "\$cid":/src
+          set +e
+          docker start -a "\$cid"
+          rc=\$?
+          set -e
+          docker cp "\$cid":/src/reports/. "${env.WORKSPACE}/reports/" 2>/dev/null || true
+          docker rm -f "\$cid" >/dev/null
+          exit \$rc
+        fi
+    """
 }
