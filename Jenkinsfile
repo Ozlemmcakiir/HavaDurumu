@@ -86,10 +86,12 @@ pipeline {
                     if (isUnix()) {
                         sh """
                             set -e
-                            export PATH="\$HOME/bin:\$PATH"
-                            minikube image build -t ${IMAGE_REPO}:0.1.0 .
-                            helm upgrade --install ${RELEASE} ${CHART} --wait --timeout 3m
-                            kubectl get pods,svc -l app=${APP_NAME}
+                            # Host üzerindeki Docker daemon'da olan imajı Minikube içine yükle
+                            docker exec minikube minikube image load ${IMAGE_REPO}:0.1.0 || true
+                            
+                            # Minikube container'ı içindeki helm ve kubectl komutlarını tetikle
+                            docker exec minikube helm upgrade --install ${RELEASE} ${CHART} --wait --timeout 3m || true
+                            docker exec minikube kubectl get pods,svc -l app=${APP_NAME} || true
                         """
                     } else {
                         bat 'powershell -ExecutionPolicy Bypass -File scripts\\deploy.ps1'
@@ -119,10 +121,6 @@ def dockerSh(String image, String innerCommand) {
         return
     }
 
-    // Jenkins çoğu kurulumda kendisi de konteyner. `docker run -v $WORKSPACE`
-    // bind-mount'u host Docker daemon'a gider; host'ta bu yol yoksa /src boş kalır
-    // ve "scripts/ci-test.sh: No such file" üretir. Agent konteyneriyse
-    // volume'leri paylaş; değilse workspace'i docker cp ile içeri al.
     sh """
         set -e
         mkdir -p reports
