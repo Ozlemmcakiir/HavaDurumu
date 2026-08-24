@@ -39,7 +39,7 @@ HavaDurumu/
 └── scripts/
     ├── deploy.ps1          # minikube image build + helm install
     ├── uninstall.ps1
-    └── ci-test.sh          # Jenkins Test stage (python:3.12-slim içinde)
+    └── ci-test.sh          # Jenkins Test stage (python:3.14.7-slim içinde)
 ```
 
 ## Minikube + Helm (önerilen)
@@ -92,8 +92,8 @@ kubectl port-forward svc/havadurumu 8080:8000
 ## Yerel Python (küme olmadan)
 
 ```powershell
-py -3.12 -m pip install -r requirements.txt
-py -3.12 main.py
+py -3.14 -m pip install -r requirements.txt
+py -3.14 main.py
 ```
 
 ## Sadece Docker
@@ -109,7 +109,7 @@ Konteyner 8000 dinler; laptop'ta 8080'e map edilir.
 
 Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
 
-1. **Test** — `python:3.12-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
+1. **Test** — `python:3.14.7-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
 2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
 3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
 4. **Deploy Minikube** — kapalı gelir; job parametresinde `DEPLOY_MINIKUBE` işaretlenirse `scripts/deploy.ps1` (Windows) veya `minikube image build` + `helm upgrade` (Linux)
@@ -139,8 +139,8 @@ Windows Docker Desktop'ta soket yolu farklı olabilir; o zaman Jenkins'i host'ta
 CI'yı Jenkins olmadan yerelde denemek:
 
 ```powershell
-py -3.12 -m pip install -r requirements-dev.txt
-py -3.12 -m pytest
+py -3.14 -m pip install -r requirements-dev.txt
+py -3.14 -m pytest
 docker run --rm -v ${PWD}:/src -w /src alpine/helm:3.16.4 lint charts/havadurumu
 docker build -t havadurumu:0.1.0 .
 ```

@@ -22,7 +22,7 @@ pipeline {
         CHART      = 'charts/havadurumu'
         IMAGE_REPO = 'havadurumu'
         IMAGE_TAG  = "0.1.${env.BUILD_NUMBER}"
-        PYTHON_CI  = 'python:3.12-slim'
+        PYTHON_CI  = 'python:3.14.7-slim'
         HELM_CI    = 'alpine/helm:3.16.4'
     }
 
