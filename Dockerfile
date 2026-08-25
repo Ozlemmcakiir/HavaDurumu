@@ -4,9 +4,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLET_FORCE_WEB_SERVER=true \
     FLET_SERVER_IP=0.0.0.0 \
-    FLET_SERVER_PORT=8000
+    FLET_SERVER_PORT=8080
 
 WORKDIR /app
+
+# Flet web sunucusu için gerekli bağımlılıklar
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
@@ -21,6 +27,6 @@ RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["python", "main.py"]
