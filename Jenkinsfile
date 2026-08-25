@@ -118,7 +118,7 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'sh scripts/deploy-azure.sh'
+                        sh 'sh scripts/deploy-azure.sh1'
                     } else {
                         bat 'powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1'
                     }
