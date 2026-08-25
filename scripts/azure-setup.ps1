@@ -8,7 +8,7 @@
 #   .\scripts\azure-setup.ps1
 #
 # Cikti: scripts/azure.env  + Jenkins'e yapistirilacak service principal
-# Canli URL: https://<AZURE_APP_NAME>.azurewebsites.net
+# Canli URL: https://gokyuzu-app.azurewebsites.net
 # Not: Linux container icin App Service Free (F1) yetmez; plan B1 (ucretli).
 
 $ErrorActionPreference = "Stop"
@@ -66,7 +66,7 @@ $Rg       = if ($env:AZURE_RESOURCE_GROUP) { $env:AZURE_RESOURCE_GROUP } else { 
 $Plan     = if ($env:AZURE_APP_PLAN) { $env:AZURE_APP_PLAN } else { "havadurumu-plan" }
 $suffix   = Get-Random -Minimum 1000 -Maximum 9999
 $AcrName  = if ($env:AZURE_ACR_NAME) { $env:AZURE_ACR_NAME } else { "gokyuzuacr$suffix" }
-$AppName  = if ($env:AZURE_APP_NAME) { $env:AZURE_APP_NAME } else { "gokyuzu-havadurumu-$suffix" }
+$AppName  = if ($env:AZURE_APP_NAME) { $env:AZURE_APP_NAME } else { "gokyuzu-app" }
 $AcrName  = $AcrName.ToLower() -replace "[^a-z0-9]", ""
 
 Write-Host "==> Resource group $Rg ($Location)"
@@ -132,7 +132,7 @@ if ($LASTEXITCODE -ne 0 -or -not $spRaw) {
     $sp = $spRaw | ConvertFrom-Json
 }
 
-$site = "https://$AppName.azurewebsites.net"
+$site = "https://gokyuzu-app.azurewebsites.net"
 Write-Host ""
 Write-Host "Azure altyapi hazir. Imaj henuz yok — Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1"
 Write-Host "Site (ilk deploy sonrasi): $site"

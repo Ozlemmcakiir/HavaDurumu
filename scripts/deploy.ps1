@@ -51,4 +51,4 @@ kubectl get pods,svc,ingress -l app=havadurumu
 Write-Host ""
 Write-Host "Minikube egitim kurulumu bitti. Canli site Azure:"
 Write-Host "  Jenkins DEPLOY_AZURE  veya  .\scripts\deploy-azure.ps1"
-Write-Host "  https://<AZURE_APP_NAME>.azurewebsites.net"
+Write-Host "  https://gokyuzu-app.azurewebsites.net"

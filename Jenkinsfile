@@ -19,9 +19,9 @@ pipeline {
             defaultValue: false,
             description: 'Açık olursa Azure Container Registry (ACR) ve App Service üzerine canlıya alma yapılır.'
         )
-        string(name: 'AZURE_RESOURCE_GROUP', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_RESOURCE_GROUP')
-        string(name: 'AZURE_ACR_NAME', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_ACR_NAME')
-        string(name: 'AZURE_APP_NAME', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_APP_NAME')
+        string(name: 'AZURE_RESOURCE_GROUP', defaultValue: 'havadurumu-rg', description: 'Azure resource group')
+        string(name: 'AZURE_ACR_NAME', defaultValue: '', description: 'Azure Container Registry adı (azure-setup çıktısı)')
+        string(name: 'AZURE_APP_NAME', defaultValue: 'gokyuzu-app', description: 'Canlı site: https://gokyuzu-app.azurewebsites.net')
     }
 
     environment {
@@ -121,7 +121,7 @@ pipeline {
                     def acr = params.AZURE_ACR_NAME?.trim()
                     def app = params.AZURE_APP_NAME?.trim()
                     if (!rg || !acr || !app) {
-                        error('DEPLOY_AZURE açık ama AZURE_RESOURCE_GROUP / AZURE_ACR_NAME / AZURE_APP_NAME boş. Build with Parameters ile azure-setup.ps1 çıktısını yazın. Canlı URL: https://<AZURE_APP_NAME>.azurewebsites.net')
+                        error('DEPLOY_AZURE açık ama AZURE_RESOURCE_GROUP / AZURE_ACR_NAME / AZURE_APP_NAME boş. Canlı URL: https://gokyuzu-app.azurewebsites.net')
                     }
                     echo "Azure hedef: https://${app}.azurewebsites.net  RG=${rg} ACR=${acr}"
 
@@ -156,9 +156,7 @@ pipeline {
         success {
             script {
                 echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
-                if (params.DEPLOY_AZURE && params.AZURE_APP_NAME?.trim()) {
-                    echo "CANLI site (Azure): https://${params.AZURE_APP_NAME}.azurewebsites.net"
-                }
+                echo "CANLI site: https://gokyuzu-app.azurewebsites.net"
             }
         }
         failure {

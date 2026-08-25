@@ -1,13 +1,13 @@
 # Gökyüzü — Hava Durumu
 
-Open-Meteo verisiyle çalışan Flet web uygulaması. Canlı adres **yalnızca Azure**:
+Open-Meteo verisiyle çalışan Flet web uygulaması. Canlı adres (telefon ve diğer cihazlar dahil):
 
-`https://<AZURE_APP_NAME>.azurewebsites.net`
+**[https://gokyuzu-app.azurewebsites.net](https://gokyuzu-app.azurewebsites.net)**
 
 ```
 Python kodu → Jenkins (test, helm lint, docker build)
             → DEPLOY_AZURE → ACR + App Service
-            → https://<app>.azurewebsites.net
+            → https://gokyuzu-app.azurewebsites.net
 ```
 
 Chart adı tarif, release adı o tarifin bu kümedeki kurulumudur.
@@ -91,12 +91,12 @@ Veya yerelde (önce `docker build -t havadurumu:0.1.0 .`):
 
 ### Adım 5 — Site
 
-`https://<AZURE_APP_NAME>.azurewebsites.net` — ilk açılış 1–2 dk. Laptop açık olmak zorunda değil.
+[https://gokyuzu-app.azurewebsites.net](https://gokyuzu-app.azurewebsites.net) — ilk açılış 1–2 dk. Laptop açık olmak zorunda değil.
 
 Log:
 
 ```powershell
-az webapp log tail --name <AZURE_APP_NAME> --resource-group havadurumu-rg
+az webapp log tail --name gokyuzu-app --resource-group havadurumu-rg
 ```
 
 ### Sık komutlar (eğitim kümesi, canlı site değil)
@@ -134,7 +134,7 @@ Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
 1. **Test** — `python:3.14.7-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
 2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
 3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
-4. **Deploy Azure** — `DEPLOY_AZURE` işaretliyse ACR push + App Service. Site: `https://<AZURE_APP_NAME>.azurewebsites.net`
+4. **Deploy Azure** — `DEPLOY_AZURE` işaretliyse ACR push + App Service. Site: [https://gokyuzu-app.azurewebsites.net](https://gokyuzu-app.azurewebsites.net)
 
 Agent'ta Python veya Helm kurulu olması gerekmez. **Docker** gerekir (Test ve Helm aşamaları konteynerde koşar, imaj host Docker ile üretilir).
 

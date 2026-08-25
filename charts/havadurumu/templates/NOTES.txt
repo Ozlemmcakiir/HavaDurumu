@@ -13,7 +13,7 @@ Gökyüzü ({{ .Chart.Name }}) yüklendi.
 Canlı site Azure App Service (lokal URL yok):
 
   Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1
-  https://<AZURE_APP_NAME>.azurewebsites.net
+  https://gokyuzu-app.azurewebsites.net
 
 Ölçeklemek için values.yaml içinde replicaCount'u değiştirip tekrar:
 

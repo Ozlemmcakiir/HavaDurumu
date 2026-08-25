@@ -1,7 +1,7 @@
 # Jenkins'in urettigi havadurumu imajini ACR'ye push eder, App Service'i gunceller.
 # Jenkins: powershell ... deploy-azure.ps1 -ResourceGroup X -AcrName Y -AppName Z
 #
-# Canli URL: https://<AZURE_APP_NAME>.azurewebsites.net
+# Canli URL: https://gokyuzu-app.azurewebsites.net
 
 param(
     [string]$ResourceGroup = "",
@@ -43,7 +43,7 @@ foreach ($k in $need) {
     $v = ([Environment]::GetEnvironmentVariable($k) + "").Trim()
     if (-not $v) {
         Write-Host "Eksik $k. Jenkins Build with Parameters icine azure-setup ciktisini yazin."
-        Write-Host "Canli site: https://<AZURE_APP_NAME>.azurewebsites.net"
+        Write-Host "Canli site: https://gokyuzu-app.azurewebsites.net"
         exit 1
     }
     Set-Item -Path "Env:$k" -Value $v
@@ -102,9 +102,8 @@ az webapp config container set `
 
 az webapp restart --name $AppName --resource-group $Rg --output none
 
-$site = "https://$AppName.azurewebsites.net"
 Write-Host ""
 Write-Host "Azure deploy bitti."
-Write-Host "  $site"
+Write-Host "  https://gokyuzu-app.azurewebsites.net"
 Write-Host "Ilk acilis 1-2 dk surebilir. Laptop acik olmak zorunda degil."
 Write-Host "Log: az webapp log tail --name $AppName --resource-group $Rg"

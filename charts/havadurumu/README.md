@@ -31,4 +31,4 @@ minikube image build -t havadurumu:0.1.0 .
 helm upgrade --install bilgeadam charts/havadurumu
 ```
 
-Canlı site bu chart değil, Azure: `https://<AZURE_APP_NAME>.azurewebsites.net` (`scripts\azure-setup.ps1` + Jenkins `DEPLOY_AZURE`).
+Canlı site: [https://gokyuzu-app.azurewebsites.net](https://gokyuzu-app.azurewebsites.net)
