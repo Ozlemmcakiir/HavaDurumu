@@ -26,5 +26,6 @@ def test_ci_yardimci_dosyalari():
     assert (ROOT / "scripts/open-demo.ps1").is_file()
     assert (ROOT / "scripts/azure-setup.ps1").is_file()
     assert (ROOT / "scripts/deploy-azure.ps1").is_file()
+    assert (ROOT / "scripts/deploy-azure.sh").is_file()
     assert (ROOT / "scripts/azure.env.example").is_file()
     assert (ROOT / "pytest.ini").is_file()

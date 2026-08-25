@@ -97,12 +97,12 @@ az webapp create `
 $acrUser = az acr credential show --name $AcrName --query username --output tsv
 $acrPass = az acr credential show --name $AcrName --query "passwords[0].value" --output tsv
 
-Write-Host "==> Container ayarlari (port 8000, websocket, ACR pull)"
+Write-Host "==> Container ayarlari (port 8080, websocket, ACR pull)"
 az webapp config appsettings set --name $AppName --resource-group $Rg --output none --settings `
-    WEBSITES_PORT=8000 `
+    WEBSITES_PORT=8080 `
     FLET_FORCE_WEB_SERVER=true `
     FLET_SERVER_IP=0.0.0.0 `
-    FLET_SERVER_PORT=8000 `
+    FLET_SERVER_PORT=8080 `
     WEBSITES_ENABLE_APP_SERVICE_STORAGE=false `
     DOCKER_REGISTRY_SERVER_URL="https://$AcrLogin" `
     DOCKER_REGISTRY_SERVER_USERNAME="$acrUser" `

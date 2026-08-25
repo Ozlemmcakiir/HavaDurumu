@@ -2,9 +2,12 @@
 
 Open-Meteo verisiyle çalışan Flet web uygulaması.
 
+**Canlı site Azure'dır:** `https://<AZURE_APP_NAME>.azurewebsites.net`  
+`http://havadurumu.localtest.me:8080` yalnızca laptop Minikube'dur; Azure değil, telefondan açılmaz.
+
 - **Jenkins build** (test, helm lint, docker) her zaman aynı kalır.
 - **Laptop eğitim:** Minikube + Helm + nginx (`DEPLOY_MINIKUBE`).
-- **Herkese açık:** Azure App Service (`DEPLOY_AZURE`). Ngrok yok.
+- **Herkese açık:** Azure App Service (`DEPLOY_AZURE`).
 
 ```
 Python kodu → Jenkins (test, helm lint, docker build)
@@ -44,7 +47,8 @@ HavaDurumu/
     ├── open-demo.ps1       # nginx'i :8080'e bağlar (laptop + aynı Wi-Fi)
     ├── open-firewall.ps1   # telefon LAN için Windows 8080 (yönetici)
     ├── azure-setup.ps1     # bir kez: RG, ACR, App Service (B1)
-    ├── deploy-azure.ps1    # imajı ACR'ye push + App Service güncelle
+    ├── deploy-azure.ps1    # Windows: ACR push + App Service
+    ├── deploy-azure.sh     # Linux Jenkins: aynı iş
     ├── azure.env.example   # Azure isim şablonu (asıl azure.env git'te yok)
     ├── uninstall.ps1
     └── ci-test.sh          # Jenkins Test stage (python:3.14.7-slim içinde)

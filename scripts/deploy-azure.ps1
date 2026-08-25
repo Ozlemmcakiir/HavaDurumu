@@ -1,15 +1,24 @@
 # Jenkins'in urettigi havadurumu imajini ACR'ye push eder, App Service'i gunceller.
-# Test / helm lint / docker build / Minikube stage'leri AYNI KALIR.
+# Jenkins: powershell ... deploy-azure.ps1 -ResourceGroup X -AcrName Y -AppName Z
 #
-# Yerel:  az login;  .\scripts\azure-setup.ps1 (bir kez);  docker build -t havadurumu:0.1.0 .
-#         .\scripts\deploy-azure.ps1
-# Jenkins: DEPLOY_AZURE isaretli, asagidaki env'ler job'da tanili.
+# Canli URL: https://<AZURE_APP_NAME>.azurewebsites.net
+# http://havadurumu.localtest.me:8080 Azure DEGILDIR (sadece laptop Minikube).
+
+param(
+    [string]$ResourceGroup = "",
+    [string]$AcrName = "",
+    [string]$AppName = ""
+)
 
 $ErrorActionPreference = "Stop"
 $env:Path = "$env:USERPROFILE\bin;" + $env:Path
 
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
+
+if ($ResourceGroup) { $env:AZURE_RESOURCE_GROUP = $ResourceGroup }
+if ($AcrName) { $env:AZURE_ACR_NAME = $AcrName }
+if ($AppName) { $env:AZURE_APP_NAME = $AppName }
 
 function Import-DotEnv([string]$Path) {
     if (-not (Test-Path $Path)) { return }
@@ -32,10 +41,13 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
 
 $need = @("AZURE_RESOURCE_GROUP", "AZURE_ACR_NAME", "AZURE_APP_NAME")
 foreach ($k in $need) {
-    if (-not [Environment]::GetEnvironmentVariable($k)) {
-        Write-Host "Eksik $k. Once .\scripts\azure-setup.ps1 veya Jenkins env."
+    $v = ([Environment]::GetEnvironmentVariable($k) + "").Trim()
+    if (-not $v) {
+        Write-Host "Eksik $k. Jenkins Build with Parameters icine azure-setup ciktisini yazin."
+        Write-Host "Canli site: https://<AZURE_APP_NAME>.azurewebsites.net — localtest.me kullanmayin."
         exit 1
     }
+    Set-Item -Path "Env:$k" -Value $v
 }
 
 $Rg      = $env:AZURE_RESOURCE_GROUP
@@ -66,7 +78,7 @@ if ($env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET -and $env:AZURE_TENANT_ID
     }
 }
 
-$exists = docker image inspect $LocalImage 2>$null
+docker image inspect $LocalImage 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Yerel imaj yok: $LocalImage"
     Write-Host "Once Jenkins Docker Build veya: docker build -t ${LocalRepo}:0.1.0 -t $LocalImage ."

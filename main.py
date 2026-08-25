@@ -18,8 +18,8 @@ if __name__ == "__main__":
     except ValueError:
         port = 8080
 
-    ft.app(
-        target=main,
+    ft.run(
+        main,
         view=ft.AppView.WEB_BROWSER,
         assets_dir="assets",
         host=host,
