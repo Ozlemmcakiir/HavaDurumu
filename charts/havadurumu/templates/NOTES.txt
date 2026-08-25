@@ -20,6 +20,9 @@ Demo URL (ücretsiz host, domain / A kaydı yok):
        http://{{ .Values.ingress.host }}:8080
   4. Telefon (aynı Wi-Fi, mobil veri kapalı):
        http://<laptop-Wi-Fi-IP>:8080
+  5. Herkese açık site Azure App Service:
+       .\scripts\azure-setup.ps1   (bir kez)
+       Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1
 
 Akış: tarayıcı → nginx Ingress → Service → Flet pod.
 

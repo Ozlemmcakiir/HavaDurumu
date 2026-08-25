@@ -50,10 +50,8 @@ helm list
 Write-Host ""
 kubectl get pods,svc,ingress -l app=havadurumu
 Write-Host ""
-Write-Host "Jenkins build+deploy bitti. Siteyi nginx uzerinden acmak icin AYRI bir pencerede:"
+Write-Host "Jenkins Minikube deploy bitti. Mimari: Jenkins -> Minikube -> nginx"
+Write-Host "Laptop (ayri pencere, kapatma):"
 Write-Host "  .\scripts\open-demo.ps1"
-Write-Host ""
-Write-Host "Laptop :"
 Write-Host "  http://${DemoHost}:8080"
-Write-Host "Telefon (ayni Wi-Fi, script LAN IP yazar):"
-Write-Host "  http://<laptop-Wi-Fi-IP>:8080"
+Write-Host "Herkese acik site Azure: Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1"

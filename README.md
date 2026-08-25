@@ -1,13 +1,16 @@
 # Gökyüzü — Hava Durumu
 
-Open-Meteo verisiyle çalışan Flet web uygulaması. Yerel kümede **Jenkins → Minikube + Helm + nginx Ingress** ile açılır. Satın alınmış domain / A kaydı yok; demo host ücretsizdir.
+Open-Meteo verisiyle çalışan Flet web uygulaması.
+
+- **Jenkins build** (test, helm lint, docker) her zaman aynı kalır.
+- **Laptop eğitim:** Minikube + Helm + nginx (`DEPLOY_MINIKUBE`).
+- **Herkese açık:** Azure App Service (`DEPLOY_AZURE`). Ngrok yok.
 
 ```
-Python kodu → Jenkins (test, helm lint, docker build, deploy)
-            → Docker imajı (havadurumu:0.1.0)
-            → Helm chart (havadurumu)  release: bilgeadam
-            → 2 pod + Service + nginx Ingress
-            → http://havadurumu.localtest.me:8080
+Python kodu → Jenkins (test, helm lint, docker build)
+            → Docker imajı (havadurumu:0.1.x)
+            ├─ DEPLOY_MINIKUBE → Helm + nginx → http://havadurumu.localtest.me:8080
+            └─ DEPLOY_AZURE    → ACR + App Service → https://<app>.azurewebsites.net
 ```
 
 Chart adı tarif, release adı o tarifin bu kümedeki kurulumudur.
@@ -23,7 +26,7 @@ HavaDurumu/
 ├── weather_utils.py        # ikon / tema
 ├── assets/                 # logo
 ├── Dockerfile              # imaj (port 8000)
-├── Jenkinsfile             # test → helm lint → docker build → (opsiyonel) nginx deploy
+├── Jenkinsfile             # test → helm lint → docker → (opsiyonel) Minikube / Azure
 ├── tests/                  # pytest (API mock'lu, ağ gerekmez)
 ├── requirements-dev.txt    # pytest + requests (CI)
 ├── charts/havadurumu/      # Helm paketi  ← asıl kurulum
@@ -38,7 +41,11 @@ HavaDurumu/
 ├── k8s/havadurumu.yaml     # Helm öncesi düz YAML (referans)
 └── scripts/
     ├── deploy.ps1          # minikube + nginx ingress + helm install
-    ├── open-demo.ps1       # nginx'i :8080'e bağlar, demo URL açılır
+    ├── open-demo.ps1       # nginx'i :8080'e bağlar (laptop + aynı Wi-Fi)
+    ├── open-firewall.ps1   # telefon LAN için Windows 8080 (yönetici)
+    ├── azure-setup.ps1     # bir kez: RG, ACR, App Service (B1)
+    ├── deploy-azure.ps1    # imajı ACR'ye push + App Service güncelle
+    ├── azure.env.example   # Azure isim şablonu (asıl azure.env git'te yok)
     ├── uninstall.ps1
     └── ci-test.sh          # Jenkins Test stage (python:3.14.7-slim içinde)
 ```
@@ -73,7 +80,58 @@ Tarayıcı: [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me
 
 Akış: tarayıcı → nginx Ingress → Service `havadurumu:8000` → Flet pod.
 
-Adım adım elle:
+## Herkese açık: Azure App Service
+
+Jenkins **build kırılmaz**. Test / lint / docker aynıdır. Azure yalnızca isteğe bağlı `DEPLOY_AZURE` stage'idir. Minikube + nginx eğitim kümesi durur.
+
+Linux container **Free F1'de çalışmaz**; setup **B1** plan açar (ücretli). Domain gerekmez: `https://<uygulama>.azurewebsites.net`. Özel domain sonra, ücretli planda Azure belgesindeki CNAME/A + TXT ile eklenir.
+
+### Adım 1 — Azure CLI ve giriş
+
+```powershell
+winget install Microsoft.AzureCLI
+az login
+```
+
+### Adım 2 — Altyapı (bir kez)
+
+```powershell
+cd C:\Users\merve.arslan\IdeaProjects\HavaDurumu
+.\scripts\azure-setup.ps1
+```
+
+Resource group, ACR, B1 plan, Web App, websocket (Flet), `scripts\azure.env` ve Jenkins service principal üretir.
+
+### Adım 3 — Jenkins ortam değişkenleri
+
+Job **Configure** → Environment / Credentials. Setup'ın yazdırdığı değerler:
+
+- `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID`
+- `AZURE_RESOURCE_GROUP` / `AZURE_ACR_NAME` / `AZURE_APP_NAME`
+
+Agent'ta **Azure CLI** ve **Docker** olmalı (push için).
+
+### Adım 4 — Deploy
+
+Jenkins: **Build with Parameters** → **DEPLOY_AZURE** işaretle → Build.
+
+Veya yerelde (önce `docker build -t havadurumu:0.1.0 .`):
+
+```powershell
+.\scripts\deploy-azure.ps1
+```
+
+### Adım 5 — Site
+
+`https://<AZURE_APP_NAME>.azurewebsites.net` — ilk açılış 1–2 dk. Laptop açık olmak zorunda değil.
+
+Log:
+
+```powershell
+az webapp log tail --name <AZURE_APP_NAME> --resource-group havadurumu-rg
+```
+
+Adım adım elle (yalnız Minikube):
 
 ```powershell
 minikube start --driver=docker
@@ -121,7 +179,8 @@ Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
 1. **Test** — `python:3.14.7-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
 2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
 3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
-4. **Deploy Minikube** — kapalı gelir; job parametresinde `DEPLOY_MINIKUBE` işaretlenirse nginx Ingress açılır, Helm ile `bilgeadam` kurulur. Sonra `.\scripts\open-demo.ps1` → [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080)
+4. **Deploy Minikube** — kapalı gelir; işaretlenirse Helm + nginx (laptop).
+5. **Deploy Azure** — kapalı gelir; işaretlenirse ACR push + App Service. Herkese açık URL Azure'dadır.
 
 Agent'ta Python veya Helm kurulu olması gerekmez. **Docker** gerekir (Test ve Helm aşamaları konteynerde koşar, imaj host Docker ile üretilir).
 

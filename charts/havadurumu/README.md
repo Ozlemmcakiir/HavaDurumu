@@ -34,4 +34,4 @@ kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
 
 Tarayıcı: http://havadurumu.localtest.me:8080
 
-Veya `scripts\deploy.ps1` ardından `scripts\open-demo.ps1`.
+Veya `scripts\deploy.ps1` ardından `scripts\open-demo.ps1`. Herkese açık yayın chart dışındadır: Azure App Service (`scripts\azure-setup.ps1` + Jenkins `DEPLOY_AZURE`).
