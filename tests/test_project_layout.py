@@ -19,6 +19,7 @@ def test_helm_chart_adi_ve_imaj():
     assert "enabled: true" in values
     assert "havadurumu.localtest.me" in values
     assert "className: nginx" in values
+    assert "catchAll: true" in values
 
 
 def test_ci_yardimci_dosyalari():

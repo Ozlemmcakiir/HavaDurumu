@@ -24,4 +24,15 @@ spec:
                 name: {{ include "havadurumu.name" . }}
                 port:
                   number: {{ .Values.service.port }}
+    {{- if .Values.ingress.catchAll }}
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "havadurumu.name" . }}
+                port:
+                  number: {{ .Values.service.port }}
+    {{- end }}
 {{- end }}
