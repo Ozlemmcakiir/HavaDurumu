@@ -118,9 +118,10 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'sh scripts/deploy-azure.sh1'
+                        // script adındaki son '1' karakteri kaldırıldı ve parametreler iletildi
+                        sh "sh scripts/deploy-azure.sh '${params.AZURE_RESOURCE_GROUP}' '${params.AZURE_ACR_NAME}' '${params.AZURE_APP_NAME}'"
                     } else {
-                        bat 'powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1'
+                        bat "powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1 -ResourceGroup '${params.AZURE_RESOURCE_GROUP}' -AcrName '${params.AZURE_ACR_NAME}' -AppName '${params.AZURE_APP_NAME}'"
                     }
                 }
             }
