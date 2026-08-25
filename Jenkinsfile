@@ -4,7 +4,7 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
-        timeout(time: 40, unit: 'MINUTES')
+        timeout(time: 25, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
@@ -12,13 +12,16 @@ pipeline {
         booleanParam(
             name: 'DEPLOY_MINIKUBE',
             defaultValue: false,
-            description: 'Açık olursa Minikube + Helm + nginx Ingress kurulur (laptop). Test/lint/docker her zaman çalışır.'
+            description: 'Açık olursa Minikube + Helm + nginx Ingress kurulur.'
         )
         booleanParam(
             name: 'DEPLOY_AZURE',
             defaultValue: false,
-            description: "Açık olursa imaj ACR'ye gider, App Service güncellenir. Önce scripts/azure-setup.ps1 ve Jenkins AZURE_* env."
+            description: 'Açık olursa Azure Container Registry (ACR) ve App Service üzerine canlıya alma yapılır.'
         )
+        string(name: 'AZURE_RESOURCE_GROUP', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_RESOURCE_GROUP')
+        string(name: 'AZURE_ACR_NAME', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_ACR_NAME')
+        string(name: 'AZURE_APP_NAME', defaultValue: '', description: 'azure-setup.ps1 betiğinden gelen AZURE_APP_NAME')
     }
 
     environment {
@@ -115,7 +118,7 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'pwsh -File scripts/deploy-azure.ps1'
+                        sh 'sh scripts/deploy-azure.sh'
                     } else {
                         bat 'powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1'
                     }
@@ -126,9 +129,13 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
-            echo "Minikube: DEPLOY_MINIKUBE + scripts/open-demo.ps1 -> http://havadurumu.localtest.me:8080"
-            echo "Azure: DEPLOY_AZURE -> https://<AZURE_APP_NAME>.azurewebsites.net"
+            script {
+                echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
+                echo "Minikube deploy açıldıysa site: http://havadurumu.localtest.me:8080"
+                if (params.DEPLOY_AZURE) {
+                    echo "Azure Canlı Site: https://${params.AZURE_APP_NAME}.azurewebsites.net"
+                }
+            }
         }
         failure {
             echo "Pipeline kırıldı. Console Output'un en altına bak."
