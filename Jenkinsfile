@@ -130,8 +130,15 @@ pipeline {
                             set -e
                             echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || true)"
                             pwd
-                            ls -la scripts
-                            test -f scripts/deploy-azure.sh
+                            mkdir -p scripts
+                            if [ ! -f scripts/deploy-azure.sh ]; then
+                              echo "deploy-azure.sh workspace'te yok; GitHub main aliniyor"
+                              curl -fsSL https://raw.githubusercontent.com/Ozlemmcakiir/HavaDurumu/main/scripts/deploy-azure.sh -o scripts/deploy-azure.sh
+                            fi
+                            # Windows checkout CRLF kirarsa sh hata verir
+                            sed -i 's/\r$//' scripts/deploy-azure.sh 2>/dev/null || sed -i '' 's/\r$//' scripts/deploy-azure.sh
+                            chmod +x scripts/deploy-azure.sh
+                            ls -la scripts/deploy-azure.sh
                         '''
                         sh "sh scripts/deploy-azure.sh '${rg}' '${acr}' '${app}'"
                     } else {
