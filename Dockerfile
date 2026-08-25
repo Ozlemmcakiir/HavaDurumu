@@ -8,12 +8,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Flet web sunucusu için gerekli bağımlılıklar
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
 

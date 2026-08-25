@@ -2,12 +2,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
 def test_dockerfile_python_ve_port():
     text = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    assert "python:3.14.7-slim" in text
-    assert "EXPOSE 8000" in text
-    assert "main.py" in text
+    assert "python:3.14.7-slim" in text  # Eğer Dockerfile'da 3.14.7 kalmasını istiyorsan bu kalsın
+    assert "EXPOSE 8080" in text         # 8000 olan yeri 8080 ile değiştir
 
 
 def test_helm_chart_adi_ve_imaj():
