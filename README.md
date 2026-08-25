@@ -1,13 +1,13 @@
 # Gökyüzü — Hava Durumu
 
-Open-Meteo verisiyle çalışan Flet web uygulaması. Yerel kümede **Minikube + Helm** ile açılır.
+Open-Meteo verisiyle çalışan Flet web uygulaması. Yerel kümede **Jenkins → Minikube + Helm + nginx Ingress** ile açılır. Satın alınmış domain / A kaydı yok; demo host ücretsizdir.
 
 ```
-Python kodu → Docker imajı (havadurumu:0.1.0)
-            → Helm chart (havadurumu)
-            → release (bilgeadam)
-            → 2 pod + Service
-            → tarayıcı (port-forward)
+Python kodu → Jenkins (test, helm lint, docker build, deploy)
+            → Docker imajı (havadurumu:0.1.0)
+            → Helm chart (havadurumu)  release: bilgeadam
+            → 2 pod + Service + nginx Ingress
+            → http://havadurumu.localtest.me:8080
 ```
 
 Chart adı tarif, release adı o tarifin bu kümedeki kurulumudur.
@@ -23,7 +23,7 @@ HavaDurumu/
 ├── weather_utils.py        # ikon / tema
 ├── assets/                 # logo
 ├── Dockerfile              # imaj (port 8000)
-├── Jenkinsfile             # stajyer yazar: test → helm lint → docker build
+├── Jenkinsfile             # test → helm lint → docker build → (opsiyonel) nginx deploy
 ├── tests/                  # pytest (API mock'lu, ağ gerekmez)
 ├── requirements-dev.txt    # pytest + requests (CI)
 ├── charts/havadurumu/      # Helm paketi  ← asıl kurulum
@@ -34,10 +34,11 @@ HavaDurumu/
 │       ├── service.yaml
 │       ├── configmap.yaml
 │       ├── serviceaccount.yaml
-│       └── ingress.yaml    # kapalı
+│       └── ingress.yaml    # nginx: havadurumu.localtest.me
 ├── k8s/havadurumu.yaml     # Helm öncesi düz YAML (referans)
 └── scripts/
-    ├── deploy.ps1          # minikube image build + helm install
+    ├── deploy.ps1          # minikube + nginx ingress + helm install
+    ├── open-demo.ps1       # nginx'i :8080'e bağlar, demo URL açılır
     ├── uninstall.ps1
     └── ci-test.sh          # Jenkins Test stage (python:3.14.7-slim içinde)
 ```
@@ -55,27 +56,35 @@ Proje kökünden:
 Script şunları yapar:
 
 1. Minikube yoksa `minikube start --driver=docker`
-2. `minikube image build -t havadurumu:0.1.0 .` — imaj kümenin Docker'ına gider (`imagePullPolicy: Never`)
-3. `helm lint charts/havadurumu`
-4. `helm upgrade --install bilgeadam charts/havadurumu`
+2. nginx Ingress addon'u açar, controller hazır olana kadar bekler
+3. `minikube image build -t havadurumu:0.1.0 .` — imaj kümenin Docker'ına gider (`imagePullPolicy: Never`)
+4. `helm lint charts/havadurumu`
+5. `helm upgrade --install bilgeadam charts/havadurumu`
 
-Uygulamayı açmak (pencere açık kalsın):
+Uygulamayı **nginx üzerinden** açmak (ayrı pencere, açık kalsın):
 
 ```powershell
-kubectl port-forward svc/havadurumu 8080:8000
+.\scripts\open-demo.ps1
 ```
 
-Tarayıcı: [http://127.0.0.1:8080](http://127.0.0.1:8080) — varsayılan şehir Ankara.
+Tarayıcı: [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080) — varsayılan şehir Ankara.
+
+`localtest.me` ücretsiz bir demo DNS'tir, `127.0.0.1`'e gider. Domain satın almaya ve A kaydı girmeye gerek yoktur. Hosts dosyası da gerekmez.
+
+Akış: tarayıcı → nginx Ingress → Service `havadurumu:8000` → Flet pod.
 
 Adım adım elle:
 
 ```powershell
 minikube start --driver=docker
+minikube addons enable ingress
 minikube image build -t havadurumu:0.1.0 .
 helm upgrade --install bilgeadam charts/havadurumu
-kubectl get pods,svc -l app=havadurumu
-kubectl port-forward svc/havadurumu 8080:8000
+kubectl get pods,svc,ingress -l app=havadurumu
+kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
 ```
+
+Tarayıcı: [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080)
 
 ### Sık komutlar
 
@@ -83,7 +92,7 @@ kubectl port-forward svc/havadurumu 8080:8000
 | --- | --- |
 | `minikube status` | Küme ayakta mı? |
 | `helm list -A` | Release'ler — `bilgeadam` görünmeli |
-| `kubectl get pods -l app=havadurumu` | 2 pod yeşil mi? |
+| `kubectl get pods,ingress -l app=havadurumu` | 2 pod yeşil mi, Ingress host doğru mu? |
 | `helm upgrade --install bilgeadam charts/havadurumu` | Değer değişince yeniden uygula |
 | `helm uninstall bilgeadam` | Kaldır (`scripts\uninstall.ps1`) |
 
@@ -112,7 +121,7 @@ Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
 1. **Test** — `python:3.14.7-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
 2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
 3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
-4. **Deploy Minikube** — kapalı gelir; job parametresinde `DEPLOY_MINIKUBE` işaretlenirse `scripts/deploy.ps1` (Windows) veya `minikube image build` + `helm upgrade` (Linux)
+4. **Deploy Minikube** — kapalı gelir; job parametresinde `DEPLOY_MINIKUBE` işaretlenirse nginx Ingress açılır, Helm ile `bilgeadam` kurulur. Sonra `.\scripts\open-demo.ps1` → [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080)
 
 Agent'ta Python veya Helm kurulu olması gerekmez. **Docker** gerekir (Test ve Helm aşamaları konteynerde koşar, imaj host Docker ile üretilir).
 

@@ -12,7 +12,7 @@ pipeline {
         booleanParam(
             name: 'DEPLOY_MINIKUBE',
             defaultValue: false,
-            description: 'Açık olursa Minikube + Helm ile bilgeadam release kurulur. Agent bu makinede minikube/helm görmeli.'
+            description: 'Açık olursa Minikube + Helm + nginx Ingress ile bilgeadam kurulur. Site: http://havadurumu.localtest.me:8080 (scripts/open-demo.ps1).'
         )
     }
 
@@ -86,12 +86,15 @@ pipeline {
                     if (isUnix()) {
                         sh """
                             set -e
-                            # Host üzerindeki Docker daemon'da olan imajı Minikube içine yükle
+                            minikube addons enable ingress || true
+                            kubectl wait --namespace ingress-nginx \\
+                              --for=condition=ready pod \\
+                              --selector=app.kubernetes.io/component=controller \\
+                              --timeout=180s || true
+
                             docker exec minikube minikube image load ${IMAGE_REPO}:0.1.0 || true
-                            
-                            # Minikube container'ı içindeki helm ve kubectl komutlarını tetikle
                             docker exec minikube helm upgrade --install ${RELEASE} ${CHART} --wait --timeout 3m || true
-                            docker exec minikube kubectl get pods,svc -l app=${APP_NAME} || true
+                            docker exec minikube kubectl get pods,svc,ingress -l app=${APP_NAME} || true
                         """
                     } else {
                         bat 'powershell -ExecutionPolicy Bypass -File scripts\\deploy.ps1'
@@ -104,6 +107,8 @@ pipeline {
     post {
         success {
             echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
+            echo "Minikube deploy açıldıysa site: http://havadurumu.localtest.me:8080"
+            echo "nginx tüneli: scripts/open-demo.ps1 (pencere açık kalsın)"
         }
         failure {
             echo "Pipeline kırıldı. Console Output'un en altına bak."

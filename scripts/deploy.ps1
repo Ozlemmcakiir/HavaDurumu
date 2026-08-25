@@ -1,5 +1,7 @@
-# Gökyüzü'nü Minikube içinde Helm ile kurar / günceller.
+# Gökyüzü'nü Minikube içinde Helm + nginx Ingress ile kurar / günceller.
 # Kullanım (proje kökünden):  .\scripts\deploy.ps1
+#
+# Domain / A kaydı gerekmez. Demo host: havadurumu.localtest.me (ücretsiz, 127.0.0.1).
 
 $ErrorActionPreference = "Stop"
 $env:Path = "$env:USERPROFILE\bin;" + $env:Path
@@ -10,6 +12,7 @@ Set-Location $Root
 $Image = "havadurumu:0.1.0"
 $Release = "bilgeadam"
 $Chart = "charts/havadurumu"
+$DemoHost = "havadurumu.localtest.me"
 
 Write-Host "==> Minikube durumu"
 $minikubeOk = $false
@@ -22,6 +25,15 @@ if (-not $minikubeOk) {
     Write-Host "Minikube ayakta degil, docker surucusuyle baslatiliyor..."
     minikube start --driver=docker
 }
+
+Write-Host "==> nginx Ingress addon"
+minikube addons enable ingress
+
+Write-Host "==> Ingress controller bekleniyor"
+kubectl wait --namespace ingress-nginx `
+    --for=condition=ready pod `
+    --selector=app.kubernetes.io/component=controller `
+    --timeout=180s
 
 Write-Host "==> Imaj kumenin icine derleniyor: $Image"
 minikube image build -t $Image $Root
@@ -36,8 +48,10 @@ Write-Host ""
 Write-Host "Kurulum:"
 helm list
 Write-Host ""
-kubectl get pods,svc,configmap,sa -l app=havadurumu
+kubectl get pods,svc,ingress -l app=havadurumu
 Write-Host ""
-Write-Host "Uygulamayi acmak icin:"
-Write-Host "  kubectl port-forward svc/havadurumu 8080:8000"
-Write-Host "  http://127.0.0.1:8080"
+Write-Host "Jenkins build+deploy bitti. Siteyi nginx uzerinden acmak icin AYRI bir pencerede:"
+Write-Host "  .\scripts\open-demo.ps1"
+Write-Host ""
+Write-Host "Tarayici:"
+Write-Host "  http://${DemoHost}:8080"

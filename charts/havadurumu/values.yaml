@@ -18,8 +18,7 @@ serviceAccount:
   create: true
   name: ""
 
-# Minikube + Windows Docker'da NodePort tek başına tarayıcıya yetmez.
-# Uygulamayı açmak için: kubectl port-forward svc/havadurumu 8080:8000
+# Pod'lara sabit kapı. Dışarıdan tarayıcı nginx Ingress üzerinden gelir.
 service:
   type: NodePort
   port: 8000
@@ -31,11 +30,18 @@ env:
   FLET_SERVER_IP: "0.0.0.0"
   FLET_SERVER_PORT: "8000"
 
-# Eğitim kümesi için kapalı. Gerçek yayın için nginx ingress + host gerekir.
+# Demo yayın: satın alınmış domain / A kaydı yok.
+# localtest.me ücretsizdir ve 127.0.0.1'e çözülür (hosts dosyası gerekmez).
+# Akış: tarayıcı → nginx Ingress → Service → Flet pod.
 ingress:
-  enabled: false
+  enabled: true
   className: nginx
-  host: havadurumu.local
+  host: havadurumu.localtest.me
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
 resources:
   requests:

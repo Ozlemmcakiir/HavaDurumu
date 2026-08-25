@@ -6,12 +6,21 @@ Gökyüzü ({{ .Chart.Name }}) yüklendi.
   Pod sayısı: {{ .Values.replicaCount }}
   İmaj      : {{ .Values.image.repository }}:{{ .Values.image.tag }}
   Service   : {{ .Values.service.type }} {{ include "havadurumu.name" . }}:{{ .Values.service.port }}
+{{- if .Values.ingress.enabled }}
+  Ingress   : {{ .Values.ingress.host }}  (nginx)
+{{- end }}
 
-Uygulamayı bu laptop'tan açmak için (pencere açık kalsın):
+Demo URL (ücretsiz host, domain / A kaydı yok):
 
-  kubectl port-forward svc/{{ include "havadurumu.name" . }} 8080:{{ .Values.service.port }}
+  1. Ingress controller hazır olsun:
+       minikube addons enable ingress
+  2. nginx'i laptop'a bağla (pencere açık kalsın):
+       kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
+     veya:  .\scripts\open-demo.ps1
+  3. Tarayıcı:
+       http://{{ .Values.ingress.host }}:8080
 
-Sonra tarayıcıda: http://127.0.0.1:8080
+Akış: tarayıcı → nginx Ingress → Service → Flet pod.
 
 Ölçeklemek için values.yaml içinde replicaCount'u değiştirip tekrar:
 
@@ -20,4 +29,4 @@ Sonra tarayıcıda: http://127.0.0.1:8080
 Durumu görmek:
 
   helm list -A
-  kubectl get pods,svc -l app={{ include "havadurumu.name" . }}
+  kubectl get pods,svc,ingress -l app={{ include "havadurumu.name" . }}
