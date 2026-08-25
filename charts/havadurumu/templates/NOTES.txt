@@ -10,21 +10,10 @@ Gökyüzü ({{ .Chart.Name }}) yüklendi.
   Ingress   : {{ .Values.ingress.host }}  (nginx)
 {{- end }}
 
-Demo URL (ücretsiz host, domain / A kaydı yok):
+Canlı site Azure App Service (lokal URL yok):
 
-  1. Ingress controller hazır olsun:
-       minikube addons enable ingress
-  2. nginx'i laptop'a bağla (pencere açık kalsın):
-       .\scripts\open-demo.ps1
-  3. Tarayıcı (laptop):
-       http://{{ .Values.ingress.host }}:8080
-  4. Telefon (aynı Wi-Fi, mobil veri kapalı):
-       http://<laptop-Wi-Fi-IP>:8080
-  5. Herkese açık site Azure App Service:
-       .\scripts\azure-setup.ps1   (bir kez)
-       Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1
-
-Akış: tarayıcı → nginx Ingress → Service → Flet pod.
+  Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1
+  https://<AZURE_APP_NAME>.azurewebsites.net
 
 Ölçeklemek için values.yaml içinde replicaCount'u değiştirip tekrar:
 

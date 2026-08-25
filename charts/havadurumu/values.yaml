@@ -18,7 +18,7 @@ serviceAccount:
   create: true
   name: ""
 
-# Pod'lara sabit kapı. Dışarıdan tarayıcı nginx Ingress üzerinden gelir.
+# Pod'lara sabit kapı. Canlı yayın Azure App Service; bu chart Minikube eğitim içindir.
 service:
   type: NodePort
   port: 8000
@@ -30,19 +30,11 @@ env:
   FLET_SERVER_IP: "0.0.0.0"
   FLET_SERVER_PORT: "8000"
 
-# Demo yayın: satın alınmış domain / A kaydı yok.
-# localtest.me = laptop (127.0.0.1). catchAll = aynı Wi-Fi'deki telefon IP ile girer.
-# Akış: tarayıcı → nginx Ingress → Service → Flet pod.
+# Canlı site Azure'dadır. Ingress eğitim kümesinde kapalı.
 ingress:
-  enabled: true
+  enabled: false
   className: nginx
-  host: havadurumu.localtest.me
-  catchAll: true
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  host: havadurumu.local
 
 resources:
   requests:

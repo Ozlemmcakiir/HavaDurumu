@@ -133,11 +133,7 @@ pipeline {
             script {
                 echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
                 if (params.DEPLOY_AZURE && params.AZURE_APP_NAME?.trim()) {
-                    echo "CANLI (Azure) — tarayıcıda BUNU açın:"
-                    echo "  https://${params.AZURE_APP_NAME}.azurewebsites.net"
-                    echo "http://havadurumu.localtest.me:8080 Azure değildir; sadece laptop Minikube."
-                } else if (params.DEPLOY_MINIKUBE) {
-                    echo "Minikube (sadece bu laptop): http://havadurumu.localtest.me:8080"
+                    echo "CANLI site (Azure): https://${params.AZURE_APP_NAME}.azurewebsites.net"
                 }
             }
         }

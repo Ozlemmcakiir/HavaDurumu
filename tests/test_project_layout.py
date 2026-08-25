@@ -14,10 +14,8 @@ def test_helm_chart_adi_ve_imaj():
     assert "name: havadurumu" in chart
     assert "repository: havadurumu" in values
     assert 'tag: "0.1.0"' in values
-    assert "enabled: true" in values
-    assert "havadurumu.localtest.me" in values
     assert "className: nginx" in values
-    assert "catchAll: true" in values
+    assert "enabled: false" in values
 
 
 def test_ci_yardimci_dosyalari():

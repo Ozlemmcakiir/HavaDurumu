@@ -1,7 +1,7 @@
 # Gökyüzü'nü Minikube içinde Helm + nginx Ingress ile kurar / günceller.
 # Kullanım (proje kökünden):  .\scripts\deploy.ps1
 #
-# Domain / A kaydı gerekmez. Demo host: havadurumu.localtest.me (ücretsiz, 127.0.0.1).
+# Canlı site Azure'dadır. Bu script yalnızca Minikube eğitim kurulumudur.
 
 $ErrorActionPreference = "Stop"
 $env:Path = "$env:USERPROFILE\bin;" + $env:Path
@@ -12,7 +12,6 @@ Set-Location $Root
 $Image = "havadurumu:0.1.0"
 $Release = "bilgeadam"
 $Chart = "charts/havadurumu"
-$DemoHost = "havadurumu.localtest.me"
 
 Write-Host "==> Minikube durumu"
 $minikubeOk = $false
@@ -50,8 +49,6 @@ helm list
 Write-Host ""
 kubectl get pods,svc,ingress -l app=havadurumu
 Write-Host ""
-Write-Host "Jenkins Minikube deploy bitti. Mimari: Jenkins -> Minikube -> nginx"
-Write-Host "Laptop (ayri pencere, kapatma):"
-Write-Host "  .\scripts\open-demo.ps1"
-Write-Host "  http://${DemoHost}:8080"
-Write-Host "Herkese acik site Azure: Jenkins DEPLOY_AZURE veya .\scripts\deploy-azure.ps1"
+Write-Host "Minikube egitim kurulumu bitti. Canli site Azure:"
+Write-Host "  Jenkins DEPLOY_AZURE  veya  .\scripts\deploy-azure.ps1"
+Write-Host "  https://<AZURE_APP_NAME>.azurewebsites.net"

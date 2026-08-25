@@ -2,7 +2,6 @@
 # Jenkins: powershell ... deploy-azure.ps1 -ResourceGroup X -AcrName Y -AppName Z
 #
 # Canli URL: https://<AZURE_APP_NAME>.azurewebsites.net
-# http://havadurumu.localtest.me:8080 Azure DEGILDIR (sadece laptop Minikube).
 
 param(
     [string]$ResourceGroup = "",
@@ -44,7 +43,7 @@ foreach ($k in $need) {
     $v = ([Environment]::GetEnvironmentVariable($k) + "").Trim()
     if (-not $v) {
         Write-Host "Eksik $k. Jenkins Build with Parameters icine azure-setup ciktisini yazin."
-        Write-Host "Canli site: https://<AZURE_APP_NAME>.azurewebsites.net — localtest.me kullanmayin."
+        Write-Host "Canli site: https://<AZURE_APP_NAME>.azurewebsites.net"
         exit 1
     }
     Set-Item -Path "Env:$k" -Value $v

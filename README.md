@@ -1,19 +1,13 @@
 # Gökyüzü — Hava Durumu
 
-Open-Meteo verisiyle çalışan Flet web uygulaması.
+Open-Meteo verisiyle çalışan Flet web uygulaması. Canlı adres **yalnızca Azure**:
 
-**Canlı site Azure'dır:** `https://<AZURE_APP_NAME>.azurewebsites.net`  
-`http://havadurumu.localtest.me:8080` yalnızca laptop Minikube'dur; Azure değil, telefondan açılmaz.
-
-- **Jenkins build** (test, helm lint, docker) her zaman aynı kalır.
-- **Laptop eğitim:** Minikube + Helm + nginx (`DEPLOY_MINIKUBE`).
-- **Herkese açık:** Azure App Service (`DEPLOY_AZURE`).
+`https://<AZURE_APP_NAME>.azurewebsites.net`
 
 ```
 Python kodu → Jenkins (test, helm lint, docker build)
-            → Docker imajı (havadurumu:0.1.x)
-            ├─ DEPLOY_MINIKUBE → Helm + nginx → http://havadurumu.localtest.me:8080
-            └─ DEPLOY_AZURE    → ACR + App Service → https://<app>.azurewebsites.net
+            → DEPLOY_AZURE → ACR + App Service
+            → https://<app>.azurewebsites.net
 ```
 
 Chart adı tarif, release adı o tarifin bu kümedeki kurulumudur.
@@ -28,8 +22,8 @@ HavaDurumu/
 ├── weather_service.py      # hava durumu API
 ├── weather_utils.py        # ikon / tema
 ├── assets/                 # logo
-├── Dockerfile              # imaj (port 8000)
-├── Jenkinsfile             # test → helm lint → docker → (opsiyonel) Minikube / Azure
+├── Dockerfile              # imaj (port 8080, Azure)
+├── Jenkinsfile             # test → helm lint → docker → DEPLOY_AZURE
 ├── tests/                  # pytest (API mock'lu, ağ gerekmez)
 ├── requirements-dev.txt    # pytest + requests (CI)
 ├── charts/havadurumu/      # Helm paketi  ← asıl kurulum
@@ -40,7 +34,7 @@ HavaDurumu/
 │       ├── service.yaml
 │       ├── configmap.yaml
 │       ├── serviceaccount.yaml
-│       └── ingress.yaml    # nginx: havadurumu.localtest.me
+│       └── ingress.yaml    # eğitim; canlı yayın Azure
 ├── k8s/havadurumu.yaml     # Helm öncesi düz YAML (referans)
 └── scripts/
     ├── deploy.ps1          # minikube + nginx ingress + helm install
@@ -54,41 +48,11 @@ HavaDurumu/
     └── ci-test.sh          # Jenkins Test stage (python:3.14.7-slim içinde)
 ```
 
-## Minikube + Helm (önerilen)
+## Canlı yayın: Azure App Service
 
-Önkoşul: Docker Desktop ayakta, `minikube` ve `helm` PATH'te (`%USERPROFILE%\bin` yeterli).
+Tarayıcıda açılacak adres budur. Laptop / Minikube adresi kullanılmaz.
 
-Proje kökünden:
-
-```powershell
-.\scripts\deploy.ps1
-```
-
-Script şunları yapar:
-
-1. Minikube yoksa `minikube start --driver=docker`
-2. nginx Ingress addon'u açar, controller hazır olana kadar bekler
-3. `minikube image build -t havadurumu:0.1.0 .` — imaj kümenin Docker'ına gider (`imagePullPolicy: Never`)
-4. `helm lint charts/havadurumu`
-5. `helm upgrade --install bilgeadam charts/havadurumu`
-
-Uygulamayı **nginx üzerinden** açmak (ayrı pencere, açık kalsın):
-
-```powershell
-.\scripts\open-demo.ps1
-```
-
-Tarayıcı: [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080) — varsayılan şehir Ankara.
-
-`localtest.me` ücretsiz bir demo DNS'tir, `127.0.0.1`'e gider. Domain satın almaya ve A kaydı girmeye gerek yoktur. Hosts dosyası da gerekmez.
-
-Akış: tarayıcı → nginx Ingress → Service `havadurumu:8000` → Flet pod.
-
-## Herkese açık: Azure App Service
-
-Jenkins **build kırılmaz**. Test / lint / docker aynıdır. Azure yalnızca isteğe bağlı `DEPLOY_AZURE` stage'idir. Minikube + nginx eğitim kümesi durur.
-
-Linux container **Free F1'de çalışmaz**; setup **B1** plan açar (ücretli). Domain gerekmez: `https://<uygulama>.azurewebsites.net`. Özel domain sonra, ücretli planda Azure belgesindeki CNAME/A + TXT ile eklenir.
+Linux container **Free F1'de çalışmaz**; setup **B1** plan açar. Domain gerekmez.
 
 ### Adım 1 — Azure CLI ve giriş
 
@@ -135,20 +99,7 @@ Log:
 az webapp log tail --name <AZURE_APP_NAME> --resource-group havadurumu-rg
 ```
 
-Adım adım elle (yalnız Minikube):
-
-```powershell
-minikube start --driver=docker
-minikube addons enable ingress
-minikube image build -t havadurumu:0.1.0 .
-helm upgrade --install bilgeadam charts/havadurumu
-kubectl get pods,svc,ingress -l app=havadurumu
-kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
-```
-
-Tarayıcı: [http://havadurumu.localtest.me:8080](http://havadurumu.localtest.me:8080)
-
-### Sık komutlar
+### Sık komutlar (eğitim kümesi, canlı site değil)
 
 | Komut | Ne bakar? |
 | --- | --- |
@@ -171,10 +122,10 @@ py -3.14 main.py
 
 ```powershell
 docker build -t havadurumu:0.1.0 .
-docker run --rm -p 8080:8000 havadurumu:0.1.0
+docker run --rm -p 8080:8080 havadurumu:0.1.0
 ```
 
-Konteyner 8000 dinler; laptop'ta 8080'e map edilir.
+Konteyner 8080 dinler (Azure `WEBSITES_PORT` ile aynı).
 
 ## Jenkins CI
 
@@ -183,8 +134,7 @@ Kod Git'e düşünce (veya Jenkins'te **Build Now**) sırayla:
 1. **Test** — `python:3.14.7-slim` içinde `py_compile` + pytest (Open-Meteo çağrıları mock'lanır, internet gerekmez)
 2. **Helm Lint** — `alpine/helm` ile `helm lint` + `helm template`
 3. **Docker Build** — `havadurumu:0.1.<BUILD_NUMBER>` ve `havadurumu:0.1.0`
-4. **Deploy Minikube** — kapalı gelir; işaretlenirse Helm + nginx (laptop).
-5. **Deploy Azure** — kapalı gelir; işaretlenirse ACR push + App Service. Herkese açık URL Azure'dadır.
+4. **Deploy Azure** — `DEPLOY_AZURE` işaretliyse ACR push + App Service. Site: `https://<AZURE_APP_NAME>.azurewebsites.net`
 
 Agent'ta Python veya Helm kurulu olması gerekmez. **Docker** gerekir (Test ve Helm aşamaları konteynerde koşar, imaj host Docker ile üretilir).
 

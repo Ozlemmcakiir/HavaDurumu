@@ -46,7 +46,7 @@ missing=""
 if [ -n "$missing" ]; then
     echo "Eksik:$missing"
     echo "Jenkins Build with Parameters: AZURE_RESOURCE_GROUP, AZURE_ACR_NAME, AZURE_APP_NAME doldurun."
-    echo "Canli URL azurewebsites.net — http://havadurumu.localtest.me:8080 Azure DEGILDIR."
+    echo "Canli URL: https://<AZURE_APP_NAME>.azurewebsites.net"
     exit 1
 fi
 
@@ -99,5 +99,4 @@ az webapp config container set \
 az webapp restart --name "$AZURE_APP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --output none
 
 echo "Azure deploy bitti."
-echo "CANLI URL (bunu acin, localtest.me degil):"
-echo "  https://${AZURE_APP_NAME}.azurewebsites.net"
+echo "CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net"
