@@ -117,11 +117,28 @@ pipeline {
             }
             steps {
                 script {
+                    def rg  = params.AZURE_RESOURCE_GROUP?.trim()
+                    def acr = params.AZURE_ACR_NAME?.trim()
+                    def app = params.AZURE_APP_NAME?.trim()
+                    if (!rg || !acr || !app) {
+                        error('DEPLOY_AZURE açık ama AZURE_RESOURCE_GROUP / AZURE_ACR_NAME / AZURE_APP_NAME boş. Build with Parameters ile azure-setup.ps1 çıktısını yazın. Canlı URL: https://<AZURE_APP_NAME>.azurewebsites.net')
+                    }
+                    echo "Azure hedef: https://${app}.azurewebsites.net  RG=${rg} ACR=${acr}"
+
                     if (isUnix()) {
-                        // script adındaki son '1' karakteri kaldırıldı ve parametreler iletildi
-                        sh "sh scripts/deploy-azure.sh '${params.AZURE_RESOURCE_GROUP}' '${params.AZURE_ACR_NAME}' '${params.AZURE_APP_NAME}'"
+                        sh '''
+                            set -e
+                            echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || true)"
+                            pwd
+                            ls -la scripts
+                            test -f scripts/deploy-azure.sh
+                        '''
+                        sh "sh scripts/deploy-azure.sh '${rg}' '${acr}' '${app}'"
                     } else {
-                        bat "powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1 -ResourceGroup '${params.AZURE_RESOURCE_GROUP}' -AcrName '${params.AZURE_ACR_NAME}' -AppName '${params.AZURE_APP_NAME}'"
+                        if (!fileExists('scripts/deploy-azure.ps1')) {
+                            error('scripts/deploy-azure.ps1 yok. Jenkins Git branch: main, son commit çekilsin.')
+                        }
+                        bat "powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1 -ResourceGroup '${rg}' -AcrName '${acr}' -AppName '${app}'"
                     }
                 }
             }
