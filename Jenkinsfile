@@ -36,11 +36,11 @@ pipeline {
         AZURE_ACR_NAME       = 'gokyuzuhavaacr'
         AZURE_APP_NAME       = 'gokyuzuhava-app'
 
-        // Azure Service Principal Kimlik Bilgileri
-        AZURE_CLIENT_ID      = 'YOUR_AZURE_CLIENT_ID'
-        AZURE_CLIENT_SECRET  = 'YOUR_AZURE_CLIENT_SECRET'
-        AZURE_TENANT_ID      = 'YOUR_AZURE_TENANT_ID'
-        AZURE_SUBSCRIPTION_ID= 'YOUR_AZURE_SUBSCRIPTION_ID'
+        // Azure Service Principal Kimlik Bilgileri (GÜNCELLENDİ)
+        AZURE_CLIENT_ID      = '690f237f-27b6-4fcd-b70e-1fb183e808c7'
+        AZURE_CLIENT_SECRET  = '8rr8Q~wZvvFpIWN1SVh710XC9CMhi0r8oR4OlcZI'
+        AZURE_TENANT_ID      = '76be4805-f308-4411-b258-cdcad2577ec3'
+        AZURE_SUBSCRIPTION_ID= 'f4d8df4d-9589-42c5-8590-351970b9dec5'
     }
 
     stages {
@@ -195,9 +195,9 @@ echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
                         sh """
                             set -e
                             minikube addons enable ingress || true
-                            kubectl wait --namespace ingress-nginx \
-                              --for=condition=ready pod \
-                              --selector=app.kubernetes.io/component=controller \
+                            kubectl wait --namespace ingress-nginx \\
+                              --for=condition=ready pod \\
+                              --selector=app.kubernetes.io/component=controller \\
                               --timeout=180s || true
 
                             docker exec minikube minikube image load ${IMAGE_REPO}:${IMAGE_TAG} || true
@@ -264,4 +264,4 @@ def dockerSh(String image, String innerCommand) {
           exit \$rc
         fi
     """
-}
+}git 
