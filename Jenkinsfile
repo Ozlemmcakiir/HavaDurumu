@@ -36,7 +36,7 @@ pipeline {
         AZURE_ACR_NAME       = 'gokyuzuhavaacr'
         AZURE_APP_NAME       = 'gokyuzuhava-app'
 
-        // Azure Service Principal Kimlik Bilgileri (GÜNCELLENDİ)
+        // Azure Service Principal Kimlik Bilgileri
         AZURE_CLIENT_ID      = '690f237f-27b6-4fcd-b70e-1fb183e808c7'
         AZURE_CLIENT_SECRET  = '8rr8Q~wZvvFpIWN1SVh710XC9CMhi0r8oR4OlcZI'
         AZURE_TENANT_ID      = '76be4805-f308-4411-b258-cdcad2577ec3'
@@ -94,7 +94,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Azure App Service') {
+       stage('Deploy Azure App Service') {
             when {
                 expression { return params.DEPLOY_AZURE }
             }
@@ -107,83 +107,46 @@ pipeline {
                     echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
                     echo "Hedef: https://${AZURE_APP_NAME}.azurewebsites.net"
 
-                    if (!env.AZURE_CLIENT_ID?.trim() || env.AZURE_CLIENT_ID == 'YOUR_AZURE_CLIENT_ID') {
-                        error('Lütfen Jenkinsfile içindeki AZURE_CLIENT_ID, AZURE_CLIENT_SECRET ve AZURE_TENANT_ID alanlarına kendi Azure bilgilerinizi yazın.')
-                    }
-
+                    // 1. İmajları etiketle
                     sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}"
                     sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}"
 
-                    echo "azure-cli imajı çekiliyor..."
-                    sh "docker pull ${AZURE_CLI_CI}"
-
-                    writeFile file: 'reports/azure-login.sh', text: """#!/bin/sh
-set -e
-echo "az login (service principal)"
-az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
-if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
-  az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
-fi
-echo "ACR token"
-az acr login --name ${AZURE_ACR_NAME} --expose-token --query accessToken -o tsv
-"""
-
-                    writeFile file: 'reports/azure-webapp.sh', text: """#!/bin/sh
-set -e
-az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
-if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
-  az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
-fi
-
-echo "Port ayarı yapılıyor (8080)..."
-az webapp config appsettings set \\
-  --resource-group ${AZURE_RESOURCE_GROUP} \\
-  --name ${AZURE_APP_NAME} \\
-  --settings WEBSITES_PORT=8080
-
-echo "Kapsayıcı imajı güncelleniyor..."
-az webapp config container set \\
-  --resource-group ${AZURE_RESOURCE_GROUP} \\
-  --name ${AZURE_APP_NAME} \\
-  --docker-custom-image-name ${latestImage} \\
-  --docker-registry-server-url https://${acrServer}
-
-az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
-echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
-"""
-
-                    echo "ACR login + docker push..."
+                    // 2. Azure ve ACR Login İşlemi
                     sh """
                         set -e
-                        self=\$(hostname)
-                        chmod +x reports/azure-login.sh reports/azure-webapp.sh
+                        # Azure CLI ile login ol ve ACR access token al
                         TOKEN=\$(docker run --rm \\
-                          --volumes-from "\$self" \\
-                          -w "${env.WORKSPACE}" \\
-                          -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
-                          --entrypoint sh \\
-                          ${AZURE_CLI_CI} \\
-                          "${env.WORKSPACE}/reports/azure-login.sh")
+                          -e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \\
+                          -e AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET} \\
+                          -e AZURE_TENANT_ID=${AZURE_TENANT_ID} \\
+                          ${AZURE_CLI_CI} sh -c "\\
+                            az login --service-principal -u \\\$AZURE_CLIENT_ID -p \\\$AZURE_CLIENT_SECRET --tenant \\\$AZURE_TENANT_ID --output none && \\
+                            az acr login --name ${AZURE_ACR_NAME} --expose-token --query accessToken -o tsv\\
+                          ")
+
+                        # Docker Daemon'ı ACR'ye authenticate et
                         echo "\$TOKEN" | docker login ${acrServer} --username 00000000-0000-0000-0000-000000000000 --password-stdin
-                        docker push ${fullImage}
-                        docker push ${latestImage}
                     """
 
-                    echo "App Service güncelleniyor..."
-                    sh """
-                        set -e
-                        self=\$(hostname)
-                        docker run --rm \\
-                          --volumes-from "\$self" \\
-                          -w "${env.WORKSPACE}" \\
-                          -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
-                          --entrypoint sh \\
-                          ${AZURE_CLI_CI} \\
-                          "${env.WORKSPACE}/reports/azure-webapp.sh"
+                    // 3. İmajları ACR'ye Push Et
+                    sh "docker push ${fullImage}"
+                    sh "docker push ${latestImage}"
+
+                    // 4. Azure Web App'i Güncelle ve Yeniden Başlat
+                    def updateWebAppCmd = """
+                        az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID} --output none
+                        az account set --subscription ${AZURE_SUBSCRIPTION_ID} --output none
+                        az webapp config appsettings set --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME} --settings WEBSITES_PORT=8080
+                        az webapp config container set --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME} --docker-custom-image-name ${latestImage} --docker-registry-server-url https://${acrServer}
+                        az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
                     """
+
+                    dockerSh("${AZURE_CLI_CI}", "sh -c \"${updateWebAppCmd}\"")
                 }
             }
         }
+
+            
 
         stage('Deploy Minikube') {
             when {
@@ -264,4 +227,4 @@ def dockerSh(String image, String innerCommand) {
           exit \$rc
         fi
     """
-}git 
+}
