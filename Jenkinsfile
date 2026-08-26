@@ -100,43 +100,29 @@ pipeline {
 
                     echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
 
-                    // 1. Docker imajlarını ACR formatına tag'le (Host Docker üzerinde çalışır)
+                    // 1. Docker imajlarını ACR formatında etiketle
                     def tagCmds = """
                         docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}
                         docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}
                     """
-                    if (isUnix()) {
-                        sh tagCmds
-                    } else {
-                        bat tagCmds
+                    if (isUnix()) { 
+                        sh tagCmds 
+                    } else { 
+                        bat tagCmds 
                     }
 
-                    // 2. Azure işlemleri için Azure CLI container'ı kullan
-                    // Not: ACR push işlemi için Docker Socket'a erişim veya CLI container içinden az acr login/push gerekir.
-                    // Eğer Docker soketi container'a mount edildiyse doğrudan az acr login + docker push yapılabilir:
-                    def azScript = """
+                    // 2. Azure CLI kapsayıcısında oturum aç, imajı yükle ve App Service'i güncelle
+                    dockerSh("${AZURE_CLI_CI}", """
                         az acr login --name ${AZURE_ACR_NAME}
+                        docker push ${fullImage}
+                        docker push ${latestImage}
                         az webapp config container set \
                             --resource-group ${AZURE_RESOURCE_GROUP} \
                             --name ${AZURE_APP_NAME} \
                             --docker-custom-image-name ${latestImage} \
                             --docker-registry-server-url https://${acrServer}
                         az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
-                    """
-                    
-                    // Host üzerinden imaj push işlemi
-                    def pushCmds = """
-                        docker push ${fullImage}
-                        docker push ${latestImage}
-                    """
-                    if (isUnix()) {
-                        sh pushCmds
-                    } else {
-                        bat pushCmds
-                    }
-
-                    // Azure App Service konfigürasyonunu güncelleme
-                    dockerSh("${AZURE_CLI_CI}", azScript)
+                    """)
                 }
             }
         }
