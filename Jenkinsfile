@@ -16,22 +16,25 @@ pipeline {
         )
         booleanParam(
             name: 'DEPLOY_AZURE',
-            defaultValue: false,
-            description: 'Açık olursa Azure Container Registry (ACR) ve App Service üzerine canlıya alma yapılır.'
+            defaultValue: true,
+            description: 'Açık olursa imaj ACR’ye yüklenir ve Azure App Service güncellenir.'
         )
-        string(name: 'AZURE_RESOURCE_GROUP', defaultValue: 'havadurumu-rg', description: 'Azure resource group')
-        string(name: 'AZURE_ACR_NAME', defaultValue: '', description: 'Azure Container Registry adı (azure-setup çıktısı)')
-        string(name: 'AZURE_APP_NAME', defaultValue: 'gokyuzu-app', description: 'Canlı site: https://gokyuzu-app.azurewebsites.net')
     }
 
     environment {
-        APP_NAME   = 'havadurumu'
-        RELEASE    = 'bilgeadam'
-        CHART      = 'charts/havadurumu'
-        IMAGE_REPO = 'havadurumu'
-        IMAGE_TAG  = "0.1.${env.BUILD_NUMBER}"
-        PYTHON_CI  = 'python:3.14.7-slim'
-        HELM_CI    = 'alpine/helm:3.16.4'
+        APP_NAME             = 'havadurumu'
+        RELEASE              = 'bilgeadam'
+        CHART                = 'charts/havadurumu'
+        IMAGE_REPO           = 'havadurumu'
+        IMAGE_TAG            = "0.1.${env.BUILD_NUMBER}"
+        PYTHON_CI            = 'python:3.14.7-slim'
+        HELM_CI              = 'alpine/helm:3.16.4'
+        AZURE_CLI_CI         = 'mcr.microsoft.com/azure-cli:latest'
+
+        // Azure Konfigürasyonu
+        AZURE_RESOURCE_GROUP = 'gokyuzuhava-rg'
+        AZURE_ACR_NAME       = 'gokyuzuhavaacr'
+        AZURE_APP_NAME       = 'gokyuzuhava-app'
     }
 
     stages {
@@ -45,7 +48,7 @@ pipeline {
                         echo "SCM bağlı değil. Public Git reposu klonlanıyor..."
                         git branch: 'main', url: 'https://github.com/Ozlemmcakiir/HavaDurumu.git'
                     }
-                    echo "Gökyüzü CI  image=${IMAGE_REPO}:${IMAGE_TAG}  chart=${CHART}"
+                    echo "Gökyüzü CI image=${IMAGE_REPO}:${IMAGE_TAG} chart=${CHART}"
                 }
             }
         }
@@ -75,12 +78,65 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    def cmd = "docker build -t ${IMAGE_REPO}:${IMAGE_TAG} -t ${IMAGE_REPO}:0.1.0 ."
+                    def cmd = "docker build -t ${IMAGE_REPO}:${IMAGE_TAG} -t ${IMAGE_REPO}:latest ."
                     if (isUnix()) {
                         sh cmd
                     } else {
                         bat cmd
                     }
+                }
+            }
+        }
+
+        stage('Deploy Azure App Service') {
+            when {
+                expression { return params.DEPLOY_AZURE }
+            }
+            steps {
+                script {
+                    def acrServer = "${AZURE_ACR_NAME}.azurecr.io"
+                    def fullImage = "${acrServer}/${IMAGE_REPO}:${IMAGE_TAG}"
+                    def latestImage = "${acrServer}/${IMAGE_REPO}:latest"
+
+                    echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
+
+                    // 1. Docker imajlarını ACR formatına tag'le (Host Docker üzerinde çalışır)
+                    def tagCmds = """
+                        docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}
+                        docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}
+                    """
+                    if (isUnix()) {
+                        sh tagCmds
+                    } else {
+                        bat tagCmds
+                    }
+
+                    // 2. Azure işlemleri için Azure CLI container'ı kullan
+                    // Not: ACR push işlemi için Docker Socket'a erişim veya CLI container içinden az acr login/push gerekir.
+                    // Eğer Docker soketi container'a mount edildiyse doğrudan az acr login + docker push yapılabilir:
+                    def azScript = """
+                        az acr login --name ${AZURE_ACR_NAME}
+                        az webapp config container set \
+                            --resource-group ${AZURE_RESOURCE_GROUP} \
+                            --name ${AZURE_APP_NAME} \
+                            --docker-custom-image-name ${latestImage} \
+                            --docker-registry-server-url https://${acrServer}
+                        az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
+                    """
+                    
+                    // Host üzerinden imaj push işlemi
+                    def pushCmds = """
+                        docker push ${fullImage}
+                        docker push ${latestImage}
+                    """
+                    if (isUnix()) {
+                        sh pushCmds
+                    } else {
+                        bat pushCmds
+                    }
+
+                    // Azure App Service konfigürasyonunu güncelleme
+                    dockerSh("${AZURE_CLI_CI}", azScript)
                 }
             }
         }
@@ -95,12 +151,12 @@ pipeline {
                         sh """
                             set -e
                             minikube addons enable ingress || true
-                            kubectl wait --namespace ingress-nginx \\
-                              --for=condition=ready pod \\
-                              --selector=app.kubernetes.io/component=controller \\
+                            kubectl wait --namespace ingress-nginx \
+                              --for=condition=ready pod \
+                              --selector=app.kubernetes.io/component=controller \
                               --timeout=180s || true
 
-                            docker exec minikube minikube image load ${IMAGE_REPO}:0.1.0 || true
+                            docker exec minikube minikube image load ${IMAGE_REPO}:${IMAGE_TAG} || true
                             docker exec minikube helm upgrade --install ${RELEASE} ${CHART} --wait --timeout 3m || true
                             docker exec minikube kubectl get pods,svc,ingress -l app=${APP_NAME} || true
                         """
@@ -110,68 +166,18 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy Azure') {
-            when {
-                expression { return params.DEPLOY_AZURE }
-            }
-            steps {
-                script {
-                    def rg  = params.AZURE_RESOURCE_GROUP?.trim()
-                    def acr = params.AZURE_ACR_NAME?.trim()
-                    def app = params.AZURE_APP_NAME?.trim()
-                    if (!rg || !acr || !app) {
-                        error('DEPLOY_AZURE açık ama AZURE_RESOURCE_GROUP / AZURE_ACR_NAME / AZURE_APP_NAME boş. Canlı URL: https://gokyuzu-app.azurewebsites.net')
-                    }
-                    echo "Azure hedef: https://gokyuzu-app.azurewebsites.net  RG=${rg} ACR=${acr} APP=${app}"
-
-                    // Harici .sh dosyası yoksa da çalışsın (eski workspace / SCM kayması).
-                    if (isUnix()) {
-                        sh """
-                            set -e
-                            command -v docker >/dev/null || { echo 'Docker yok. Jenkins konteynerine docker.sock baglayin.'; exit 1; }
-                            if ! command -v az >/dev/null; then
-                              echo 'Azure CLI yok; kuruluyor (root gerekir)...'
-                              curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-                            fi
-
-                            RG='${rg}'
-                            ACR='${acr}'
-                            APP='${app}'
-                            LOCAL='${IMAGE_REPO}:${IMAGE_TAG}'
-                            REMOTE='${acr}.azurecr.io/havadurumu:${IMAGE_TAG}'
-                            LATEST='${acr}.azurecr.io/havadurumu:0.1.0'
-
-                            if [ -n "\$AZURE_CLIENT_ID" ] && [ -n "\$AZURE_CLIENT_SECRET" ] && [ -n "\$AZURE_TENANT_ID" ]; then
-                              az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
-                              [ -n "\$AZURE_SUBSCRIPTION_ID" ] && az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
-                            else
-                              az account show --output none || { echo 'Jenkins env: AZURE_CLIENT_ID SECRET TENANT_ID ekleyin'; exit 1; }
-                            fi
-
-                            docker image inspect "\$LOCAL" >/dev/null
-                            az acr login --name "\$ACR"
-                            docker tag "\$LOCAL" "\$REMOTE"
-                            docker tag "\$LOCAL" "\$LATEST"
-                            docker push "\$REMOTE"
-                            docker push "\$LATEST"
-                            az webapp config container set --name "\$APP" --resource-group "\$RG" --docker-custom-image-name "\$REMOTE" --output none
-                            az webapp restart --name "\$APP" --resource-group "\$RG" --output none
-                            echo CANLI URL: https://gokyuzu-app.azurewebsites.net
-                        """
-                    } else {
-                        bat "powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1 -ResourceGroup '${rg}' -AcrName '${acr}' -AppName '${app}'"
-                    }
-                }
-            }
-        }
     }
 
     post {
         success {
             script {
-                echo "Pipeline yeşil. İmaj: ${IMAGE_REPO}:${IMAGE_TAG}"
-                echo "CANLI site: https://gokyuzu-app.azurewebsites.net"
+                echo "============================================================"
+                echo " Pipeline Başarıyla Tamamlandı!"
+                echo " İmaj Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
+                if (params.DEPLOY_AZURE) {
+                    echo " Canlı Azure URL: https://gokyuzuhava-app-ayg0f0dab0arb2et.ukwest-01.azurewebsites.net"
+                }
+                echo "============================================================"
             }
         }
         failure {
@@ -195,19 +201,8 @@ def dockerSh(String image, String innerCommand) {
         mkdir -p reports
         if ! docker info >/dev/null 2>&1; then
           echo "============================================================"
-          echo "Docker socket erisilemiyor. Test/Build/Azure bu yuzden durur."
+          echo "Docker socket erisilemiyor. Test/Build bu yuzden durur."
           echo "Jenkins konteynerinde /var/run/docker.sock yok veya izin yok."
-          echo
-          echo "Host'ta Jenkins'i soyle yeniden calistirin (volume ayni kalsin):"
-          echo "  docker stop jenkins || true"
-          echo "  docker rm jenkins || true"
-          echo "  docker run -d --name jenkins --restart unless-stopped \\\\"
-          echo "    -p 8080:8080 -p 50000:50000 \\\\"
-          echo "    -v jenkins_home:/var/jenkins_home \\\\"
-          echo "    -v /var/run/docker.sock:/var/run/docker.sock \\\\"
-          echo "    -u root \\\\"
-          echo "    jenkins/jenkins:lts-jdk17"
-          echo "Sonra job'u tekrar Build with Parameters ile calistirin."
           echo "============================================================"
           exit 1
         fi
