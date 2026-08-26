@@ -148,11 +148,15 @@ Jenkins job:
 
 Jenkins'i PDF'deki gibi Docker konteynerinde çalıştırıyorsan, pipeline'ın `docker` komutunu görebilmesi için soketi bağla:
 
-```powershell
-docker run -d --name jenkins `
-  -p 8080:8080 -p 50000:50000 `
-  -v jenkins_home:/var/jenkins_home `
-  -v /var/run/docker.sock:/var/run/docker.sock `
+Jenkins Docker içindeyse **soketi bağlayın** (`permission denied` olursa Test/Azure kırılır):
+
+```bash
+docker stop jenkins; docker rm jenkins
+docker run -d --name jenkins --restart unless-stopped \
+  -p 8080:8080 -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -u root \
   jenkins/jenkins:lts-jdk17
 ```
 

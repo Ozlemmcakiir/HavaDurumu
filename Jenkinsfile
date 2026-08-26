@@ -129,8 +129,11 @@ pipeline {
                     if (isUnix()) {
                         sh """
                             set -e
-                            command -v az >/dev/null || { echo 'Azure CLI yok. Agent: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash'; exit 1; }
-                            command -v docker >/dev/null || { echo 'Docker yok.'; exit 1; }
+                            command -v docker >/dev/null || { echo 'Docker yok. Jenkins konteynerine docker.sock baglayin.'; exit 1; }
+                            if ! command -v az >/dev/null; then
+                              echo 'Azure CLI yok; kuruluyor (root gerekir)...'
+                              curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+                            fi
 
                             RG='${rg}'
                             ACR='${acr}'
@@ -190,6 +193,24 @@ def dockerSh(String image, String innerCommand) {
     sh """
         set -e
         mkdir -p reports
+        if ! docker info >/dev/null 2>&1; then
+          echo "============================================================"
+          echo "Docker socket erisilemiyor. Test/Build/Azure bu yuzden durur."
+          echo "Jenkins konteynerinde /var/run/docker.sock yok veya izin yok."
+          echo
+          echo "Host'ta Jenkins'i soyle yeniden calistirin (volume ayni kalsin):"
+          echo "  docker stop jenkins || true"
+          echo "  docker rm jenkins || true"
+          echo "  docker run -d --name jenkins --restart unless-stopped \\\\"
+          echo "    -p 8080:8080 -p 50000:50000 \\\\"
+          echo "    -v jenkins_home:/var/jenkins_home \\\\"
+          echo "    -v /var/run/docker.sock:/var/run/docker.sock \\\\"
+          echo "    -u root \\\\"
+          echo "    jenkins/jenkins:lts-jdk17"
+          echo "Sonra job'u tekrar Build with Parameters ile calistirin."
+          echo "============================================================"
+          exit 1
+        fi
         self=\$(hostname)
         if [ -f /.dockerenv ] && docker inspect "\$self" >/dev/null 2>&1; then
           docker run --rm --volumes-from "\$self" -w "${env.WORKSPACE}" ${image} ${innerCommand}
