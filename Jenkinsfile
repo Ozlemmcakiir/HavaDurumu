@@ -94,35 +94,68 @@ pipeline {
             }
             steps {
                 script {
-                    def acrServer = "${AZURE_ACR_NAME}.azurecr.io"
-                    def fullImage = "${acrServer}/${IMAGE_REPO}:${IMAGE_TAG}"
+                    def acrServer   = "${AZURE_ACR_NAME}.azurecr.io"
+                    def fullImage   = "${acrServer}/${IMAGE_REPO}:${IMAGE_TAG}"
                     def latestImage = "${acrServer}/${IMAGE_REPO}:latest"
 
                     echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
+                    echo "Hedef: https://${AZURE_APP_NAME}.azurewebsites.net"
 
-                    // 1. Docker imajlarını ACR formatında etiketle
-                    def tagCmds = """
+                    sh """
+                        set -e
                         docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}
                         docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}
                     """
-                    if (isUnix()) { 
-                        sh tagCmds 
-                    } else { 
-                        bat tagCmds 
-                    }
 
-                    // 2. Azure CLI kapsayıcısında oturum aç, imajı yükle ve App Service'i güncelle
-                    dockerSh("${AZURE_CLI_CI}", """
-                        az acr login --name ${AZURE_ACR_NAME}
+                    writeFile file: 'reports/azure-login.sh', text: """#!/bin/bash
+set -euo pipefail
+if [ -z "\${AZURE_CLIENT_ID:-}" ] || [ -z "\${AZURE_CLIENT_SECRET:-}" ] || [ -z "\${AZURE_TENANT_ID:-}" ]; then
+  echo "Jenkins job env: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID tanimlayin."
+  exit 1
+fi
+az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
+if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
+  az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
+fi
+az acr login --name ${AZURE_ACR_NAME} --expose-token --query accessToken -o tsv
+"""
+
+                    writeFile file: 'reports/azure-webapp.sh', text: """#!/bin/bash
+set -euo pipefail
+az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
+if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
+  az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
+fi
+az webapp config container set \\
+  --resource-group ${AZURE_RESOURCE_GROUP} \\
+  --name ${AZURE_APP_NAME} \\
+  --docker-custom-image-name ${latestImage} \\
+  --docker-registry-server-url https://${acrServer}
+az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
+echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
+"""
+
+                    sh """
+                        set -e
+                        self=\$(hostname)
+                        TOKEN=\$(docker run --rm \\
+                          --volumes-from "\$self" \\
+                          -w "${env.WORKSPACE}" \\
+                          -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
+                          --entrypoint bash \\
+                          ${AZURE_CLI_CI} \\
+                          "${env.WORKSPACE}/reports/azure-login.sh")
+                        echo "\$TOKEN" | docker login ${acrServer} --username 00000000-0000-0000-0000-000000000000 --password-stdin
                         docker push ${fullImage}
                         docker push ${latestImage}
-                        az webapp config container set \
-                            --resource-group ${AZURE_RESOURCE_GROUP} \
-                            --name ${AZURE_APP_NAME} \
-                            --docker-custom-image-name ${latestImage} \
-                            --docker-registry-server-url https://${acrServer}
-                        az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
-                    """)
+                        docker run --rm \\
+                          --volumes-from "\$self" \\
+                          -w "${env.WORKSPACE}" \\
+                          -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
+                          --entrypoint bash \\
+                          ${AZURE_CLI_CI} \\
+                          "${env.WORKSPACE}/reports/azure-webapp.sh"
+                    """
                 }
             }
         }
