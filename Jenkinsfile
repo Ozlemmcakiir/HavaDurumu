@@ -4,7 +4,7 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
-        timeout(time: 25, unit: 'MINUTES')
+        timeout(time: 40, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
@@ -123,28 +123,40 @@ pipeline {
                     if (!rg || !acr || !app) {
                         error('DEPLOY_AZURE açık ama AZURE_RESOURCE_GROUP / AZURE_ACR_NAME / AZURE_APP_NAME boş. Canlı URL: https://gokyuzu-app.azurewebsites.net')
                     }
-                    echo "Azure hedef: https://${app}.azurewebsites.net  RG=${rg} ACR=${acr}"
+                    echo "Azure hedef: https://gokyuzu-app.azurewebsites.net  RG=${rg} ACR=${acr} APP=${app}"
 
+                    // Harici .sh dosyası yoksa da çalışsın (eski workspace / SCM kayması).
                     if (isUnix()) {
-                        sh '''
+                        sh """
                             set -e
-                            echo "HEAD=$(git rev-parse --short HEAD 2>/dev/null || true)"
-                            pwd
-                            mkdir -p scripts
-                            if [ ! -f scripts/deploy-azure.sh ]; then
-                              echo "deploy-azure.sh workspace'te yok; GitHub main aliniyor"
-                              curl -fsSL https://raw.githubusercontent.com/Ozlemmcakiir/HavaDurumu/main/scripts/deploy-azure.sh -o scripts/deploy-azure.sh
+                            command -v az >/dev/null || { echo 'Azure CLI yok. Agent: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash'; exit 1; }
+                            command -v docker >/dev/null || { echo 'Docker yok.'; exit 1; }
+
+                            RG='${rg}'
+                            ACR='${acr}'
+                            APP='${app}'
+                            LOCAL='${IMAGE_REPO}:${IMAGE_TAG}'
+                            REMOTE='${acr}.azurecr.io/havadurumu:${IMAGE_TAG}'
+                            LATEST='${acr}.azurecr.io/havadurumu:0.1.0'
+
+                            if [ -n "\$AZURE_CLIENT_ID" ] && [ -n "\$AZURE_CLIENT_SECRET" ] && [ -n "\$AZURE_TENANT_ID" ]; then
+                              az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
+                              [ -n "\$AZURE_SUBSCRIPTION_ID" ] && az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
+                            else
+                              az account show --output none || { echo 'Jenkins env: AZURE_CLIENT_ID SECRET TENANT_ID ekleyin'; exit 1; }
                             fi
-                            # Windows checkout CRLF kirarsa sh hata verir
-                            sed -i 's/\r$//' scripts/deploy-azure.sh 2>/dev/null || sed -i '' 's/\r$//' scripts/deploy-azure.sh
-                            chmod +x scripts/deploy-azure.sh
-                            ls -la scripts/deploy-azure.sh
-                        '''
-                        sh "sh scripts/deploy-azure.sh '${rg}' '${acr}' '${app}'"
+
+                            docker image inspect "\$LOCAL" >/dev/null
+                            az acr login --name "\$ACR"
+                            docker tag "\$LOCAL" "\$REMOTE"
+                            docker tag "\$LOCAL" "\$LATEST"
+                            docker push "\$REMOTE"
+                            docker push "\$LATEST"
+                            az webapp config container set --name "\$APP" --resource-group "\$RG" --docker-custom-image-name "\$REMOTE" --output none
+                            az webapp restart --name "\$APP" --resource-group "\$RG" --output none
+                            echo CANLI URL: https://gokyuzu-app.azurewebsites.net
+                        """
                     } else {
-                        if (!fileExists('scripts/deploy-azure.ps1')) {
-                            error('scripts/deploy-azure.ps1 yok. Jenkins Git branch: main, son commit çekilsin.')
-                        }
                         bat "powershell -ExecutionPolicy Bypass -File scripts\\deploy-azure.ps1 -ResourceGroup '${rg}' -AcrName '${acr}' -AppName '${app}'"
                     }
                 }
