@@ -31,13 +31,12 @@ pipeline {
         HELM_CI              = 'alpine/helm:3.16.4'
         AZURE_CLI_CI         = 'mcr.microsoft.com/azure-cli:latest'
 
-        // Azure Kaynak Konfigürasyonu
+        // Azure Yapılandırma Bilgileri
         AZURE_RESOURCE_GROUP = 'gokyuzuhava-rg'
         AZURE_ACR_NAME       = 'gokyuzuhavaacr'
         AZURE_APP_NAME       = 'gokyuzuhava-app'
 
         // Azure Service Principal Kimlik Bilgileri
-        // (Kendi Azure Portalı değerleriniz ile değiştirin)
         AZURE_CLIENT_ID      = 'YOUR_AZURE_CLIENT_ID'
         AZURE_CLIENT_SECRET  = 'YOUR_AZURE_CLIENT_SECRET'
         AZURE_TENANT_ID      = 'YOUR_AZURE_TENANT_ID'
@@ -108,14 +107,14 @@ pipeline {
                     echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
                     echo "Hedef: https://${AZURE_APP_NAME}.azurewebsites.net"
 
-                    if (!env.AZURE_CLIENT_ID?.trim() || !env.AZURE_CLIENT_SECRET?.trim() || !env.AZURE_TENANT_ID?.trim()) {
-                        error('AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID eksik! Lutfen environment bloguna ekleyin.')
+                    if (!env.AZURE_CLIENT_ID?.trim() || env.AZURE_CLIENT_ID == 'YOUR_AZURE_CLIENT_ID') {
+                        error('Lütfen Jenkinsfile içindeki AZURE_CLIENT_ID, AZURE_CLIENT_SECRET ve AZURE_TENANT_ID alanlarına kendi Azure bilgilerinizi yazın.')
                     }
 
                     sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}"
                     sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}"
 
-                    echo "azure-cli imaji cekiliyor (ilk sefer 1-2 dk surebilir)..."
+                    echo "azure-cli imajı çekiliyor..."
                     sh "docker pull ${AZURE_CLI_CI}"
 
                     writeFile file: 'reports/azure-login.sh', text: """#!/bin/sh
@@ -161,7 +160,7 @@ echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
                         docker push ${latestImage}
                     """
 
-                    echo "App Service guncelleniyor..."
+                    echo "App Service güncelleniyor..."
                     sh """
                         set -e
                         self=\$(hostname)
@@ -217,7 +216,7 @@ echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
             }
         }
         failure {
-            echo "Pipeline kırıldı. Console Output'un en altına bak."
+            echo "Pipeline hata aldı. Detaylar için Build Console Log'unu inceleyin."
         }
         always {
             archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
@@ -236,10 +235,7 @@ def dockerSh(String image, String innerCommand) {
         set -e
         mkdir -p reports
         if ! docker info >/dev/null 2>&1; then
-          echo "============================================================"
-          echo "Docker socket erisilemiyor. Test/Build bu yuzden durur."
-          echo "Jenkins konteynerinde /var/run/docker.sock yok veya izin yok."
-          echo "============================================================"
+          echo "Docker socket erişilemiyor."
           exit 1
         fi
         self=\$(hostname)
