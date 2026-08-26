@@ -31,10 +31,17 @@ pipeline {
         HELM_CI              = 'alpine/helm:3.16.4'
         AZURE_CLI_CI         = 'mcr.microsoft.com/azure-cli:latest'
 
-        // Azure Konfigürasyonu
+        // Azure Kaynak Konfigürasyonu
         AZURE_RESOURCE_GROUP = 'gokyuzuhava-rg'
         AZURE_ACR_NAME       = 'gokyuzuhavaacr'
         AZURE_APP_NAME       = 'gokyuzuhava-app'
+
+        // Azure Service Principal Kimlik Bilgileri
+        // (Kendi Azure Portalı değerleriniz ile değiştirin)
+        AZURE_CLIENT_ID      = 'YOUR_AZURE_CLIENT_ID'
+        AZURE_CLIENT_SECRET  = 'YOUR_AZURE_CLIENT_SECRET'
+        AZURE_TENANT_ID      = 'YOUR_AZURE_TENANT_ID'
+        AZURE_SUBSCRIPTION_ID= 'YOUR_AZURE_SUBSCRIPTION_ID'
     }
 
     stages {
@@ -102,7 +109,7 @@ pipeline {
                     echo "Hedef: https://${AZURE_APP_NAME}.azurewebsites.net"
 
                     if (!env.AZURE_CLIENT_ID?.trim() || !env.AZURE_CLIENT_SECRET?.trim() || !env.AZURE_TENANT_ID?.trim()) {
-                        error('AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID Jenkins job env olarak yok. Configure > Environment variables. Bu sh adiminda az login bununla yapilir.')
+                        error('AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID eksik! Lutfen environment bloguna ekleyin.')
                     }
 
                     sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}"
@@ -204,7 +211,7 @@ echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
                 echo " Pipeline Başarıyla Tamamlandı!"
                 echo " İmaj Tag: ${IMAGE_REPO}:${IMAGE_TAG}"
                 if (params.DEPLOY_AZURE) {
-                    echo " Canlı Azure URL: https://gokyuzuhava-app-ayg0f0dab0arb2et.ukwest-01.azurewebsites.net"
+                    echo " Canlı Azure URL: https://${AZURE_APP_NAME}.azurewebsites.net"
                 }
                 echo "============================================================"
             }
