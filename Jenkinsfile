@@ -101,27 +101,29 @@ pipeline {
                     echo "Azure ACR ve App Service dağıtımı başlatılıyor..."
                     echo "Hedef: https://${AZURE_APP_NAME}.azurewebsites.net"
 
-                    sh """
-                        set -e
-                        docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}
-                        docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}
-                    """
+                    if (!env.AZURE_CLIENT_ID?.trim() || !env.AZURE_CLIENT_SECRET?.trim() || !env.AZURE_TENANT_ID?.trim()) {
+                        error('AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID Jenkins job env olarak yok. Configure > Environment variables. Bu sh adiminda az login bununla yapilir.')
+                    }
 
-                    writeFile file: 'reports/azure-login.sh', text: """#!/bin/bash
-set -euo pipefail
-if [ -z "\${AZURE_CLIENT_ID:-}" ] || [ -z "\${AZURE_CLIENT_SECRET:-}" ] || [ -z "\${AZURE_TENANT_ID:-}" ]; then
-  echo "Jenkins job env: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID tanimlayin."
-  exit 1
-fi
+                    sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${fullImage}"
+                    sh "docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${latestImage}"
+
+                    echo "azure-cli imaji cekiliyor (ilk sefer 1-2 dk surebilir)..."
+                    sh "docker pull ${AZURE_CLI_CI}"
+
+                    writeFile file: 'reports/azure-login.sh', text: """#!/bin/sh
+set -e
+echo "az login (service principal)"
 az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
 if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
   az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
 fi
+echo "ACR token"
 az acr login --name ${AZURE_ACR_NAME} --expose-token --query accessToken -o tsv
 """
 
-                    writeFile file: 'reports/azure-webapp.sh', text: """#!/bin/bash
-set -euo pipefail
+                    writeFile file: 'reports/azure-webapp.sh', text: """#!/bin/sh
+set -e
 az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" --tenant "\$AZURE_TENANT_ID" --output none
 if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
   az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
@@ -135,24 +137,32 @@ az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NA
 echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
 """
 
+                    echo "ACR login + docker push..."
                     sh """
                         set -e
                         self=\$(hostname)
+                        chmod +x reports/azure-login.sh reports/azure-webapp.sh
                         TOKEN=\$(docker run --rm \\
                           --volumes-from "\$self" \\
                           -w "${env.WORKSPACE}" \\
                           -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
-                          --entrypoint bash \\
+                          --entrypoint sh \\
                           ${AZURE_CLI_CI} \\
                           "${env.WORKSPACE}/reports/azure-login.sh")
                         echo "\$TOKEN" | docker login ${acrServer} --username 00000000-0000-0000-0000-000000000000 --password-stdin
                         docker push ${fullImage}
                         docker push ${latestImage}
+                    """
+
+                    echo "App Service guncelleniyor..."
+                    sh """
+                        set -e
+                        self=\$(hostname)
                         docker run --rm \\
                           --volumes-from "\$self" \\
                           -w "${env.WORKSPACE}" \\
                           -e AZURE_CLIENT_ID -e AZURE_CLIENT_SECRET -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \\
-                          --entrypoint bash \\
+                          --entrypoint sh \\
                           ${AZURE_CLI_CI} \\
                           "${env.WORKSPACE}/reports/azure-webapp.sh"
                     """
