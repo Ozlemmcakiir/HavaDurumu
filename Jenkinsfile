@@ -134,11 +134,20 @@ az login --service-principal -u "\$AZURE_CLIENT_ID" -p "\$AZURE_CLIENT_SECRET" -
 if [ -n "\${AZURE_SUBSCRIPTION_ID:-}" ]; then
   az account set --subscription "\$AZURE_SUBSCRIPTION_ID" --output none
 fi
+
+echo "Port ayarı yapılıyor (8080)..."
+az webapp config appsettings set \\
+  --resource-group ${AZURE_RESOURCE_GROUP} \\
+  --name ${AZURE_APP_NAME} \\
+  --settings WEBSITES_PORT=8080
+
+echo "Kapsayıcı imajı güncelleniyor..."
 az webapp config container set \\
   --resource-group ${AZURE_RESOURCE_GROUP} \\
   --name ${AZURE_APP_NAME} \\
   --docker-custom-image-name ${latestImage} \\
   --docker-registry-server-url https://${acrServer}
+
 az webapp restart --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_APP_NAME}
 echo CANLI URL: https://${AZURE_APP_NAME}.azurewebsites.net
 """
