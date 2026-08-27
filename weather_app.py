@@ -185,16 +185,16 @@ class WeatherApp:
             [
                 ft.Image(src="logo.png", width=32, height=32),
                 ft.Text(
-                    "Bilge Adam ",
-                    size=18,
-                    weight=ft.FontWeight.W_600,
+                    " BGTS ",
+                    size=24,
+                    weight=ft.FontWeight.W_900,
                     color=WeatherTheme.TEXT,
                     font_family="Display",
                 ),
                 ft.Text(
-                    "DevOps SRE",
-                    size=11,
-                    weight=ft.FontWeight.W_500,
+                    " DevOps SRE",
+                    size=15,
+                    weight=ft.FontWeight.W_800,
                     color=WeatherTheme.MUTED,
                 ),
             ],
