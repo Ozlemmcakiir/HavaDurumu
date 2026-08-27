@@ -185,14 +185,22 @@ class WeatherApp:
             [
                 ft.Image(src="logo.png", width=32, height=32),
                 ft.Text(
-                    "",
+                    "Bilge Adam ",
                     size=18,
                     weight=ft.FontWeight.W_600,
                     color=WeatherTheme.TEXT,
                     font_family="Display",
                 ),
+                ft.Text(
+                    "DevOps SRE",
+                    size=11,
+                    weight=ft.FontWeight.W_500,
+                    color=WeatherTheme.MUTED,
+                ),
             ],
-            spacing=10,
+            spacing=0,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
         self.page.add(
@@ -413,7 +421,7 @@ class WeatherApp:
                                             bgcolor=WeatherTheme.AMBER,
                                             border_radius=3,
                                             height=4,
-                                            margin=ft.Margin.only(left=left_pct * 140, right=0),
+                                            margin=ft.Margin.only(left=left_pct * 140),
                                             width=max(width_pct * 140, 6),
                                         ),
                                     ]
